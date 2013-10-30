@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+#
+# 07-Dec-2005
+# Stefano Lacaprara  <lacaprara@pd.infn.it>  INFN Padova
+#
+# Wrapper script for crab.py
+#
+if [ -z "$PYTHONPATH" ]; then
+  export PYTHONPATH=${CRABDBSAPIPYTHON}:${CRABDLSAPIPYTHON}:${CRABPSETPYTHON}:${CRABPYTHON}
+else
+  export PYTHONPATH=${CRABDBSAPIPYTHON}:${CRABDLSAPIPYTHON}:${CRABPSETPYTHON}:${PYTHONPATH}:${CRABPYTHON}
+fi
+#echo $PYTHONPATH
+
+
+export LD_LIBRARY_PATH=${GLITE_LOCATION}/lib:${LD_LIBRARY_PATH}:${CRABLIBPYTHON}/lib64/lib
+
+# to fix a problem with OSG 
+export VOMS_PROXY_INFO_DONT_VERIFY_AC=1
+
+# to be removed asap
+if [ -z "$CMSSW_VERSION" ]; then
+  echo ''
+  echo 'crab Error: Please run cmsenv before setting the CRAB environment'
+  echo '(see also: https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideCrabHowTo#Setup_local_Environment)'
+  echo ''
+else
+  if [[ "$SCRAM_ARCH" =~ "32" ]]; then
+    export PYTHONPATH=${CRABPYSQLITE}:${PYTHONPATH}
+  elif [[ "$SCRAM_ARCH" =~ "64" ]]; then
+    ret=`python -c 'import sys; print("%i" % (sys.hexversion<0x020700F0))'`
+    if [ $ret -ne 0 ]; then
+      export PATH=${CRABSQLITE_ROOT}/bin:${PATH}
+      export LD_LIBRARY_PATH=${CRABSQLITE_ROOT}/lib:${LD_LIBRARY_PATH}
+      export PYTHONPATH=${CRABPYSQLITE64}:${PYTHONPATH} 
+    fi
+  fi
+  python $CRABPYTHON/crab.py $*
+fi

@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+#
+# 07-Dec-2005
+# Stefano Lacaprara  <lacaprara@pd.infn.it>  INFN Padova
+# Ian Tomalin - bug fix - can now use -cfg option
+#
+# Wrapper script for crab.py
+#
+if [ -z "$PYTHONPATH" ]; then
+  export PYTHONPATH=${CRABDBSAPIPYTHON}:${CRABDLSAPIPYTHON}:${CRABPSETPYTHON}:${CRABPYTHON}
+else
+  export PYTHONPATH=${CRABDBSAPIPYTHON}:${CRABDLSAPIPYTHON}:${CRABPSETPYTHON}:${PYTHONPATH}:${CRABPYTHON}
+fi
+#echo $PYTHONPATH
+
+export LD_LIBRARY_PATH=${GLITE_LOCATION}/lib:${LD_LIBRARY_PATH}
+
+# to be removed asap
+if [ -z "$CMSSW_VERSION" ]; then
+  echo ''
+  echo 'crab Error: Please run cmsenv before setting the CRAB environment'
+  echo '(see also: https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideCrabHowTo#Setup_local_Environment) '
+  echo ''
+else
+# Define working directory for temporary files.
+  python $CRABPYTHON/multicrab.py $* | tee tmp_multicrab
+  MULTICRAB_WORKDIR=`grep "working directory" tmp_multicrab | sed -e 's/  working directory   //'`
+  /usr/bin/env sh $MULTICRAB_WORKDIR/multicrab.exe
+  rm -r tmp_multicrab
+fi
