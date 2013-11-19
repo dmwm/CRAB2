@@ -1020,10 +1020,6 @@ class Cmssw(JobType):
         return job requirements to add to jdl files
         """
         req = ''
-        if self.version:
-            req='Member("VO-cms-' + \
-                 self.version + \
-                 '", other.GlueHostApplicationSoftwareRunTimeEnvironment)'
         if self.executable_arch:
             req+=' && Member("VO-cms-' + \
                  self.executable_arch + \
