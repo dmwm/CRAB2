@@ -35,5 +35,5 @@ else
       export PYTHONPATH=${CRABPYSQLITE64}:${PYTHONPATH} 
     fi
   fi
-  python $CRABPYTHON/crab.py $*
+  python $CRABPYTHON/crab.py "$@"
 fi
