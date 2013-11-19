@@ -284,8 +284,11 @@ class MultiCrab:
                 if options[o]==None:
                     cmd+=str(o)+' '
                 else:
-                    options[o] = ''.join(options[o].split())
-                    cmd+=str(o)+'='+str(options[o])+' '
+                    if (len(options[o].split())>1):
+                        cmd+='"'+str(o)+'='+str(options[o])+'" '
+                    else:
+                        options[o] = ''.join(options[o].split())
+                        cmd+=str(o)+'='+str(options[o])+' '
                 pass
             cmd+="\n"
             #print cmd
