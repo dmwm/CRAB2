@@ -769,7 +769,7 @@ Maximum wall clock time needed to finish one job.It will be used to select a sui
 
 =head3 B<max_cpu_time>
 
-Maximum CPU time needed to finish one job. It is not recommended, better use only max_wall_clock_time. Only works if used in crab confifuration file. Can not be overridden via command line in later crab commands. 
+Maximum CPU time needed to finish one job. It is not recommended, better use only max_wall_clock_time, in which case max_cpu_time is automatically set to the same value as max_wall_clock_time. Only works if used in crab confifuration file. Can not be overridden via command line in later crab commands. 
 
 =head3 B<max_rss [remoteGlidein]>
 
