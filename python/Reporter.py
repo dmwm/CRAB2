@@ -76,15 +76,19 @@ class Reporter(Actor):
             common.logger.info(msg)
         return totalLumiFilename 
 
-    def compareJsonFile(self,inputJsonFile):
+    #def compareJsonFile(self,inputJsonFile):
+    def compareJsonFile(self,inputJsonFile, outputJsonFile):
 
+        ### file contains the lumi and run analyzed by correctly finished jobs
         reportFileName = self.fjrDirectory + 'lumiSummary.json'
-        missingLumiFile=self.fjrDirectory + 'missingLumiSummary.json'
+
+        #missingLumiFile=self.fjrDirectory + 'missingLumiSummary.json'
+        missingLumiFile=self.fjrDirectory + outputJsonFile
         command = 'compareJSON.py --sub ' + inputJsonFile + ' ' + reportFileName + ' ' + missingLumiFile
         #common.logger.info(command)
         os.system(command)
-        msg = "json file containing the difference in run and lumi between input and analyzed files: %s\n" %missingLumiFile
-        msg = "to complete your analysis, you have to analyze the run and lumi reported in the %s file\n" %missingLumiFile
+        msg = "Json file about the difference in run and lumi between the lumis in %s and the lumis analyzed by your correctly terminated jobs in %s :\n%s\n"%(os.path.basename(inputJsonFile),os.path.basename(reportFileName),missingLumiFile)
+        #msg = "to complete your analysis, you have to analyze the run and lumi reported in the %s file\n" %missingLumiFile
         common.logger.info(msg)
         return
 
@@ -194,19 +198,21 @@ class Reporter(Actor):
         ### starting from the arguments.xml file, a json file containing the run:lumi
         ### that should be analyzed with the task
         inputRunLumiFileName = self.getInputRunLumi(file)
+        #print "inputRunLumiFileName = ", inputRunLumiFileName
 
         
         ### missing lumi to analyze: starting from lumimask or from argument file
         ### calculate the difference with report.json
         ### if a lumimask is used in the crab.cfg
-        if (self.cfg_params.get('CMSSW.lumi_mask')): 
-            lumimask=self.cfg_params.get('CMSSW.lumi_mask')
-            #print "lumimask = ", lumimask 
-            self.compareJsonFile(lumimask)
-        ### without lumimask    
-        elif (inputRunLumiFileName):
-            self.compareJsonFile(inputRunLumiFileName)
-        else:
-            common.logger.info("No json file to compare")
+        if (self.cfg_params.get('CMSSW.lumi_mask') == None) and (os.path.isfile(inputRunLumiFileName) == False or (os.path.isfile(inputRunLumiFileName) == True and os.path.getsize(inputRunLumiFileName) == 0)):
+            common.logger.info("No Lumi file to compare")
+        else:    
+            if (self.cfg_params.get('CMSSW.lumi_mask')): 
+                lumimask=self.cfg_params.get('CMSSW.lumi_mask')
+                #print "lumimask = ", lumimask 
+                self.compareJsonFile(lumimask,'total_missingLumiSummary.json')
+            ### without lumimask    
+            if (inputRunLumiFileName):
+                self.compareJsonFile(inputRunLumiFileName, 'task_missingLumiSummary.json')
         return
 
