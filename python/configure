@@ -28,8 +28,6 @@ function configureCrab {
 cd $ExtDir
 
 ## TEMPORARY HACK
-tar zxf crablib.tgz 
-rm crablib.tgz
 
 tar zxf py2-sqlalchemy.tgz 
 rm py2-sqlalchemy.tgz

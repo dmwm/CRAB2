@@ -763,13 +763,13 @@ item in the list must, including the closing ";". No default value.
 
 With this field it is also possible to specify which WMS you want to use (https://hostname:port/pathcode) where "hostname" is WMS name, the "port" generally is 7443 and the "pathcode" should be something like "glite_wms_wmproxy_server". No default value.
 
-=head3 B<max_cpu_time>
-
-Maximum CPU time needed to finish one job. It will be used to select a suitable queue on the CE. Time in minutes. Default value = 130.
-
 =head3 B<max_wall_clock_time>
 
-Same as previous, but with real time, and not CPU one. No default value.
+Maximum wall clock time needed to finish one job.It will be used to select a suitable place to run the job. Short running jobs have a higher chance to start sooner if this is set to a proper value (less then the default). Job will be terminated by Crab if it runs over the limit and log will be returned to user. Time in minutes. Default value is 21 hours and 50 minutes. Only works if used in crab configuration file. Can not be overridden via command line in later crab commands.
+
+=head3 B<max_cpu_time>
+
+Maximum CPU time needed to finish one job. It is not recommended, better use only max_wall_clock_time, in which case max_cpu_time is automatically set to the same value as max_wall_clock_time. Only works if used in crab confifuration file. Can not be overridden via command line in later crab commands. 
 
 =head3 B<max_rss [remoteGlidein]>
 
