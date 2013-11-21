@@ -118,6 +118,9 @@ export PYTHONPATH=\${CRAB_PBSPYTHON_ROOT}/lib/python2.6/site-packages/pbs:\$PYTH
 
 export PYTHONPATH=\${EXTERNALDIR}/py2-sqlalchemy/0.5.2-cmp7/lib/python2.6/site-packages/:\$PYTHONPATH
 
+# dbs3
+export PYTHONPATH=\${PYTHONPATH}:\${EXTERNALDIR}\dbs3client
+
 EOF
 
 # csh style
@@ -189,6 +192,9 @@ setenv CRAB_PBSPYTHON_ROOT \${CRABPBSPYTHON}/\${CRAB_PBSPYTHON_VERSION}
 setenv PYTHONPATH \${CRAB_PBSPYTHON_ROOT}/lib/python2.6/site-packages/pbs:\$PYTHONPATH
 
 setenv PYTHONPATH \${EXTERNALDIR}/py2-sqlalchemy/0.5.2-cmp7/lib/python2.6/site-packages/:\$PYTHONPATH
+
+# dbs3
+setenv PYTHONPATH \${PYTHONPATH}:\${EXTERNALDIR}\dbs3client
 
 EOF
 return
