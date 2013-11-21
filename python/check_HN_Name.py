@@ -5,9 +5,9 @@ class check_HN_name:
     def stdaloneCheck(self):  
  
         import urllib
-        from commands import getstatusoutput
+        import commands
         print 'start standalone check ...\n'
-        status, dn = getstatusoutput('voms-proxy-info -identity')
+        status, dn = commands.getstatusoutput('voms-proxy-info -identity')
         if status == 0:
            print "my DN is: %s \n"%dn
         dn = dn.split('\n')[-1]
@@ -22,8 +22,8 @@ class check_HN_name:
             username="None"
 
         cmd = "curl -s  --capath $X509_CERT_DIR --cert $X509_USER_PROXY --key $X509_USER_PROXY 'https://cmsweb.cern.ch/sitedb/data/prod/whoami'|tr ':,' '\n'|grep -A1 login|tail -1"
-        uname = subprocess.check_output(cmd,shell=True)
-        
+
+        status, uname = commands.getstatusoutput(cmd)
         
         print 'v1: my HN user name is: %s' % username
         print 'v2: my HN user name is: %s' % uname
@@ -78,26 +78,9 @@ class check_HN_name:
 
 if __name__ == '__main__' :
     import sys
-    import subprocess
     args = sys.argv[1:]
     check = check_HN_name()
 
-#    print "verify if user DN is mapped in CERN's SSO"
-#    cmd='curl -s  --capath $X509_CERT_DIR --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/dev/people" | grep "`voms-proxy-info -identity`"'
-#    DocUrl = "\nhttps://hypernews.cern.ch/HyperNews/CMS/get/cernCompAnnounce/820.html"
-#    DocUrl += "\nhttps://twiki.cern.ch/twiki/bin/view/CMS/SiteDBForCRAB"
-
-#    try:
-#        subprocess.check_call(cmd,shell=True)
-#        print "OK. user ready for SiteDB switchover on March 12, 2013\n\n"
-#    except:
-#        print "********** ATTENTION !!!!  **************"
-#        print "DN not registered in CERN's SSO"
-#        print "need to follow instructions in %s" % DocUrl
-#        print "or Crab will stop working for you on March 12, 2013"
-#        print "*****************************************"
-#        dummy=raw_input("\nHit Return to acknowlege that you read this message")
-    
     if 'crab' in args:
         check.crabCheck()  
     else:
