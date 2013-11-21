@@ -16,6 +16,7 @@ DBSAPItag="DBS_2_0_9_patch_9"
 DLSAPItag="DLS_1_1_3"
 PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_57"
 WMCOREtag="WMCORE_CRAB2_3"
+DBS3tag="DBS_3_1_8"
 
 
 ## download CRAB from GITHUB and cleanup the code a bit
@@ -77,6 +78,16 @@ rm -rf FullProdCommon
 git clone -b ${WMCOREtag} https://github.com/dmwm/WMCore-legacy.git WMCore-legacy
 mv WMCore-legacy/src/python/WMCore .
 rm -rf WMCore-legacy
+
+#
+# download DBS3 client
+#
+
+git clone -b ${DBS3tag} https://github.com/dmwm/DBS.git DBS3
+mkdir dbs3client
+mv DBS3/PycurlClient/src/python/* ./dbs3client/
+mv DBS3/Client/src/python/* ./dbs3client/
+rm -rf DBS3
 
 ## exit from external
 cd ../..
