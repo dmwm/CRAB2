@@ -17,125 +17,70 @@ DLSAPItag="DLS_1_1_3"
 PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_57"
 WMCOREtag="WMCORE_CRAB2_3"
 
-CVSrepo=":pserver:anonymous@cmscvs.cern.ch:/cvs_server/repositories"
-#export CVSROOT=${CVSrepo}"/CMSSW"
-#repo_url="https://cmsweb.cern.ch/crabconf"
-repo_url='http://cmsdoc.cern.ch/cms/ccs/wm/www/Crab/Repository/'
 
-## download CRAB from CVS and cleanup the code a bit
-echo ">> downloading CRAB tag $CRABtag from CVS CRAB"
-cvs co -r $CRABtag -d $CRABdir CRAB
+## download CRAB from GITHUB and cleanup the code a bit
+echo ">> downloading CRAB tag $CRABtag from GitHub"
+git clone -b ${CRABtag} https://github.com/dmwm/CRAB2.git $CRABdir
 
-#echo ">> downloading CRAB HEAD from CVS CRAB"
-#echo ">> NOTE: Temporary Use of HEAD "
-#cvs co -d $CRABdir CRAB
+
 
 cd $CRABdir
-cvs up -P python/BossScript
+
 chmod -x python/crab.py
 rm python/crab.*sh
-rm python/tar*
-rm python/zero
-rm -rf CRABSERVER
-rm -rf PsetCode
 mv python/configure .
 
+
+# SB -- this is likely not needed
 ## create etc subdir for admin config file
-mkdir -p etc
+#mkdir -p etc
 ## create basic config file
+#cat > etc/crab.cfg <<EOF
+#EOF
+#SB ----------------------------------
 
-cat > etc/crab.cfg <<EOF
-EOF
-
-## create external subdir  for dependeces
-mkdir -p external
+## put externals where Crab2 is used to find them
+mv externals external
 cd external
 
-## download crablib TEMPORARY HACK
-echo ">> downloading crablib from CRAB web page"
-wget --user-agent="" --no-check-certificate $repo_url/crablib.tgz
-
-echo ">> downloading py2-sqlalchemy from CRAB web page"
-wget --user-agent="" --no-check-certificate $repo_url/py2-sqlalchemy.tgz
-
-## download pbs_python
-echo ">> downloading pbs_python from CRAB web page"
-wget --user-agent="" --no-check-certificate $repo_url/pbs_python.tgz
-
-## download sqlite
-echo ">> downloading sqlite from CRAB web page"
-wget --user-agent="" --no-check-certificate $repo_url/sqlite.tgz
-
-## download py2-sqlite
-echo ">> downloading py2-sqlite from CRAB web page"
-wget --user-agent="" --no-check-certificate  $repo_url/py2-pysqlite.tgz
-
-## download pyOpenSSL
-echo ">> downloading pyOpenSSL CRAB web page"
-wget --user-agent="" --no-check-certificate  $repo_url/pyOpenSSL-0.6-python2.4.tar.gz
-
-## download simplejson
-echo ">> downloading simplejson CRAB web page"
-wget --user-agent="" --no-check-certificate  $repo_url/simplejson.tgz
-
 ## download DBS API
-echo ">> downloading DBS API tag ${DBSAPItag} from CVS DBS/Clients/PythonAPI"
-cvs co -r ${DBSAPItag} -d DBSAPI COMP/DBS/Clients/Python
-# add this dirs to the PYTHONPATH
+echo ">> downloading DBS API tag ${DBSAPItag} from GitHub/dmwm/DBSAPI"
+
+git clone -b ${DBSAPItag} https://github.com/dmwm/DBSAPI.git DBSAPI
+mv DBSAPI/Clients/Python/DBSAPI DBSAPI
+rm -rf DBSAPI/Clients
 
 ## download DLS API
 echo ">> downloading DLS PHEDeX API tag ${DLSAPItag} from CVS DLS/Client/LFCClient"
-cvs co -r ${DLSAPItag} DLS/Client/LFCClient
+git clone -b ${DLSAPItag} https://github.com/dmwm/DLSAPI.git DLS
+
+## create library in CRAB standard location for DLSAPI
 cd DLS/Client/LFCClient
-## creating library
 make PREFIX=../../../DLSAPI
 cd -
-## move to the CRAB standard location for DLSAPI
-#mv DLS/Client/lib DLSAPI
-rm -r DLS
-# add this dir to PATH
+rm -rf DLS
 
-## download PRODCOMMON
+## download PRODCOMMON and reproduce
+# the same directory structure we had when using CVS
+#
 echo ">> downloading PRODCOMMON tag ${PRODCOMMONtag} from CVS PRODCOMMON"
-#mkdir -p ProdCommon
-#cd ProdCommon
-cvs co -r ${PRODCOMMONtag} -d ProdCommon COMP/PRODCOMMON/src/python/ProdCommon
-cvs co -r ${PRODCOMMONtag} -d IMProv COMP/PRODCOMMON/src/python/IMProv
-## Use the Head
-#cvs co -d ProdCommon COMP/PRODCOMMON/src/python/ProdCommon
-#cvs co -d IMProv COMP/PRODCOMMON/src/python/IMProv
+git clone -b ${PRODCOMMONtag} https://github.com/dmwm/ProdCommon.git FullProdCommon
+mv FullProdCommon/src/python/ProdCommon ./ProdCommon
+mv FullProdCommon/src/python/IMProv ./IMProv
+rm -rf FullProdCommon
 
-cvs co -r ${WMCOREtag} -d WMCore                   COMP/WMCORE/src/python/WMCore/__init__.py
-cvs co -r ${WMCOREtag} -d WMCore/SiteScreening     COMP/WMCORE/src/python/WMCore/SiteScreening
-cvs co -r ${WMCOREtag} -d WMCore/Services          COMP/WMCORE/src/python/WMCore/Services
-cvs co -r ${WMCOREtag} -d WMCore/JobSplitting      COMP/WMCORE/src/python/WMCore/JobSplitting
-cvs co -r ${WMCOREtag} -d WMCore/DataStructs       COMP/WMCORE/src/python/WMCore/DataStructs 
-cvs co -r ${WMCOREtag} -d WMCore/                  COMP/WMCORE/src/python/WMCore/Configuration.py
-cvs co -r ${WMCOREtag} -d WMCore/Algorithms        COMP/WMCORE/src/python/WMCore/Algorithms 
-cvs co -r ${WMCOREtag} -d WMCore/                  COMP/WMCORE/src/python/WMCore/WMException.py
-cvs co -r ${WMCOREtag} -d WMCore/Wrappers          COMP/WMCORE/src/python/WMCore/Wrappers
-cvs co -r ${WMCOREtag} -d WMQuality                COMP/WMCORE/src/python/WMQuality
-cvs co -r ${WMCOREtag} -d WMCore/                  COMP/WMCORE/src/python/WMCore/DAOFactory.py
-cvs co -r ${WMCOREtag} -d WMCore/Database          COMP/WMCORE/src/python/WMCore/Database
+#
+# download the needed pieces of WMCore and reproduce
+# the same directory structure we had when using CVS
+#
 
-## Use the Head
-#cvs co  -d WMCore                   COMP/WMCORE/src/python/WMCore/__init__.py
-#cvs co  -d WMCore/SiteScreening     COMP/WMCORE/src/python/WMCore/SiteScreening
-#cvs co  -d WMCore/Services          COMP/WMCORE/src/python/WMCore/Services
-#cvs co  -d WMCore/JobSplitting      COMP/WMCORE/src/python/WMCore/JobSplitting
-#cvs co  -d WMCore/DataStructs       COMP/WMCORE/src/python/WMCore/DataStructs 
-#cvs co  -d WMCore/                  COMP/WMCORE/src/python/WMCore/Configuration.py
-#cvs co  -d WMCore/Algorithms        COMP/WMCORE/src/python/WMCore/Algorithms 
-#cvs co  -d WMCore/                  COMP/WMCORE/src/python/WMCore/WMException.py
-#cvs co  -d WMCore/Wrappers          COMP/WMCORE/src/python/WMCore/Wrappers
-#cvs co  -d WMQuality                COMP/WMCORE/src/python/WMQuality
-#cvs co  -d WMCore/                  COMP/WMCORE/src/python/WMCore/DAOFactory.py
-#cvs co  -d WMCore/Database          COMP/WMCORE/src/python/WMCore/Database
+git clone -b ${WMCOREtag} https://github.com/dmwm/WMCore-legacy.git WMCore-legacy
+mv WMCore-legacy/src/python/WMCore .
+rm -rf WMCore-legacy
 
-#cd ..
 ## exit from external
 cd ../..
 
-tar zcvf $CRABdir.tgz $CRABdir
+tar zcf $CRABdir.tgz $CRABdir
 echo ""
 echo " tarball prepared : $CRABdir.tgz "
