@@ -12,7 +12,7 @@
 ###########################################################################
 
 prog_name = 'crab'
-prog_version = (2, 9, 1)
+prog_version = (2, 9, 2)
 prog_version_str=`prog_version[0]`+'.'+`prog_version[1]`+'.'+`prog_version[2]`
 prog_authors = [
     ['Stefano Lacaprara', 'Stefano.Lacaprara@pd.infn.it', 'INFN/LNL'],
