@@ -1019,19 +1019,13 @@ class Cmssw(JobType):
         """
         return job requirements to add to jdl files
         """
-        req = ''
+        req = 'other.GlueCEStateStatus == "Production" '
         if self.executable_arch:
             req+=' && Member("VO-cms-' + \
                  self.executable_arch + \
                  '", other.GlueHostApplicationSoftwareRunTimeEnvironment)'
 
         req = req + ' && (other.GlueHostNetworkAdapterOutboundIP)'
-        if ( common.scheduler.name() in ["glite"] ):
-            ## 25-Jun-2009 SL: patch to use Cream enabled WMS
-            if ( self.cfg_params.get('GRID.use_cream',None) ):
-                req += ' && (other.GlueCEStateStatus == "Production" || other.GlueCEStateStatus == "Special")'
-            else:
-                req += ' && other.GlueCEStateStatus == "Production" '
 
         return req
 
