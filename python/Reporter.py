@@ -176,13 +176,6 @@ class Reporter(Actor):
         msg += "Luminosity section summary file: %s\n" % lumiFilename
         list_ID={}
 
-        # TEMPORARY by Fabio, to be removed
-        # avoid clashes between glite_slc5 and glite schedulers when a server is used
-        # otherwise, -report with a server requires a local scheduler
-        if self.cfg_params.get('CRAB.server_name', None) is None:
-            common.logger.debug( "Reporter updating task status")
-            task = common.scheduler.queryEverything(task['id'])
-
         for st in possible_status:
             list_ID = common._db.queryAttrRunJob({'statusScheduler':st},'jobId')
             if (len(list_ID)>0):
@@ -193,26 +186,18 @@ class Reporter(Actor):
 
 
         file = common.work_space.shareDir() + 'arguments.xml'
-        #print "file = ", file
         
         ### starting from the arguments.xml file, a json file containing the run:lumi
         ### that should be analyzed with the task
         inputRunLumiFileName = self.getInputRunLumi(file)
-        #print "inputRunLumiFileName = ", inputRunLumiFileName
-
         
-        ### missing lumi to analyze: starting from lumimask or from argument file
+        ### missing lumi to analyze: starting from argument file
         ### calculate the difference with report.json
-        ### if a lumimask is used in the crab.cfg
-        if (self.cfg_params.get('CMSSW.lumi_mask') == None) and (os.path.isfile(inputRunLumiFileName) == False or (os.path.isfile(inputRunLumiFileName) == True and os.path.getsize(inputRunLumiFileName) == 0)):
+
+        if not inputRunLumiFileName or not os.path.isfile(inputRunLumiFileName) or os.path.getsize(inputRunLumiFileName) == 0 :
             common.logger.info("No Lumi file to compare")
-        else:    
-            if (self.cfg_params.get('CMSSW.lumi_mask')): 
-                lumimask=self.cfg_params.get('CMSSW.lumi_mask')
-                #print "lumimask = ", lumimask 
-                self.compareJsonFile(lumimask,'total_missingLumiSummary.json')
-            ### without lumimask    
-            if (inputRunLumiFileName):
-                self.compareJsonFile(inputRunLumiFileName, 'task_missingLumiSummary.json')
+        else:
+            self.compareJsonFile(inputRunLumiFileName, 'task_missingLumiSummary.json')
+            
         return
 
