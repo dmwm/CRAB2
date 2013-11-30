@@ -4,8 +4,6 @@ __revision__ = "$Id: DataDiscovery.py,v 1.50 2013/09/12 13:45:22 belforte Exp $"
 __version__ = "$Revision: 1.50 $"
 
 import exceptions
-import DBSAPI.dbsApi
-from DBSAPI.dbsApiException import *
 import common
 from crab_util import *
 try: # Can remove when CMSSW 3.7 and earlier are dropped
@@ -14,7 +12,7 @@ except ImportError:
     from LumiList import LumiList
 
 import os
-
+import urlparse
 
 
 class DBSError(exceptions.Exception):
@@ -114,10 +112,54 @@ class DataDiscovery:
         """
         Contact DBS
         """
+        # make assumption that same host won't be used for both
+        # this check should catch most deployed servers
+        DBS2HOST = 'cmsdbsprod.cern.ch'
+        DBS3HOST = 'cmsweb.cern.ch'
+        useDBS2 = False
+        useDBS3 = False
+        useDAS = False
+
         ## get DBS URL
-        global_url="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
-        dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_url)
+        global_dbs2="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+        global_dbs3="https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+
+        if self.cfg_params.get('CMSSW.use_dbs3'):
+            useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
+
+        if useDBS3:
+            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
+        else:
+            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+            
         common.logger.info("Accessing DBS at: "+dbs_url)
+
+        endpoint_components = urlparse.urlsplit(dbs_url)
+
+        if endpoint_components.hostname == DBS3HOST:
+            useDBS3=True
+        elif endpoint_components.hostname == DBS2HOST:
+            useDBS2=True
+
+        if useDBS2 and useDBS3:
+            print "trying to use DBS2 and DBS3 at same time ?"
+            raise exception
+
+        if self.cfg_params.get('CMSSW.use_das'):
+            useDAS = int(self.cfg_params.get('CMSSW.use_das'))==1
+
+        #if self.cfg_params.get('CMSSW.use_dbs3'):
+        #    useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
+        #    if useDBS3 : useDBS2=False
+
+        if useDBS2:
+            common.logger.info("Will do Data Discovery using  DBS2")
+        if useDBS3:
+            common.logger.info("Will do Data Discovery using  DBS3")
+            localScopeDBS3 = not "global" in dbs_url
+        if useDAS :
+            common.logger.info("will use DAS to talk to DBS")
+
 
         ## check if runs are selected
         runselection = []
@@ -162,14 +204,28 @@ class DataDiscovery:
         defaultName = common.work_space.shareDir()+'AnalyzedBlocks.txt'
         fileBlocks_FileName = os.path.abspath(self.cfg_params.get('CMSSW.fileblocks_file',defaultName))
 
-        api = DBSAPI.dbsApi.DbsApi(args)
-        self.files = self.queryDbs(api,path=self.datasetPath,runselection=runselection,useParent=useparent)
+        if useDBS2 :
+            import DBSAPI.dbsApi
+            #from DBSAPI.dbsApiException import *
+            import DBSAPI.dbsApiException
+            api = DBSAPI.dbsApi.DbsApi(args)
+            self.files = self.queryDbs(api,path=self.datasetPath,runselection=runselection,useParent=useparent)
+        elif useDBS3 :
+            from dbs.apis.dbsClient import DbsApi
+            api = DbsApi(dbs_url)
+            self.files = self.queryDbs3(api,path=self.datasetPath,runselection=runselection,useParent=useparent,localScopeDBS3=localScopeDBS3)
+        elif useDAS :
+            self.files = self.queryDas(path=self.datasetPath,runselection=runselection,useParent=useparent)
 
         # Check to see what the dataset is
         pdsName = self.datasetPath.split("/")[1]
-        primDSs = api.listPrimaryDatasets(pdsName)
-        dataType = primDSs[0]['Type']
-        common.logger.debug("Datatype is %s" % dataType)
+        if useDBS2 :
+            primDSs = api.listPrimaryDatasets(pdsName)
+            dataType = primDSs[0]['Type']
+        elif useDBS3 :
+            dataType=api.listDataTypes(dataset=self.datasetPath)[0]['data_type']
+
+        common.logger.info("Datatype is %s" % dataType)
         if dataType == 'data' and not \
             (self.splitByRun or self.splitByLumi or self.splitDataByEvent):
             msg = 'Data must be split by lumi or by run. ' \
@@ -181,12 +237,17 @@ class DataDiscovery:
         anFileBlocks = []
         if self.skipBlocks: anFileBlocks = readTXTfile(self, fileBlocks_FileName)
 
+        print "SB+++++++++++++++++++++++++++++++++++++++++++"
+        print self.files[0]['ParentList']
+        print "SB+++++++++++++++++++++++++++++++++++++++++++"
+
         # parse files and fill arrays
         for file in self.files :
             parList  = []
             fileLumis = [] # List of tuples
             # skip already analyzed blocks
             fileblock = file['Block']['Name']
+            #print "SB fileblock = ", fileblock
             if fileblock not in anFileBlocks :
                 filename = file['LogicalFileName']
                 # asked retry the list of parent for the given child
@@ -205,6 +266,7 @@ class DataDiscovery:
                     self.lumis[filename] = lumiList.filterLumis(fileLumis)
                 else:
                     self.lumis[filename] = fileLumis
+
                 if filename.find('.dat') < 0 :
                     events    = file['NumberOfEvents']
                     # Count number of events and lumis per block
@@ -276,7 +338,100 @@ class DataDiscovery:
         except DBSError, msg:
             raise DataDiscoveryError(msg)
 
+        print "WILL RETURN FILES OF LENGTH ", len(files)
+        
         return files
+
+
+    def queryDbs3(self,api,path=None,runselection=None,useParent=None,
+                  localScopeDBS3=False):
+        
+
+        files=[]  # structure to return, named "files" in the caller
+        lfnList=[] # running list of files processed for this dataset
+        lfn2files={} # keep a map of lfn to entry in files lfn[i]=file[i]['lfn']
+        blocks=[]
+
+        #if runselection:
+        #    result=api.listBlocks(dataset=self.datasetPath, run_num=runselection)
+        #else:
+        result=api.listBlocks(dataset=self.datasetPath)
+
+        for block in result:
+            blockName = block['block_name']
+            print "SB blockName: ", blockName
+
+            # get list of files, and for each #events and parent, then
+            # will get filelumis
+
+
+        #    if runselection:
+        #        filesInBlock=api.listFiles(block_name=blockName, detail=True, run_num=runselection)
+        #    else:
+            filesInBlock=api.listFiles(block_name=blockName, detail=True)
+            for file in filesInBlock:
+                lfn=file['logical_file_name']
+                # prepare entry for files structure for this file
+                # LumiList will be filled later as lumidics for this file
+                # are found in DBS3 query output and parsed
+                fileEntry={}
+                fileEntry['LogicalFileName']=lfn
+                fileEntry['NumberOfEvents']=file['event_count']
+                fileEntry['Block']={}
+                fileEntry['Block']['Name']=blockName
+                fileEntry['Block']['StorageElementList']=[]  # needed so that can extend in Splitter.py
+                #if localScopeDBS3:
+                #    fileEntry['Block']['StorageElementList'].append(block['origin_site_name'])
+                fileEntry['LumiList']=[]
+                fileEntry['ParentList']=[]
+                # this is simple, byt very slow
+                """
+                if useParent:
+                    parentList=api.listFileParents(logical_file_name=lfn)
+                    for parent in parentList:
+                        parentDict={'LogicalFileName':parent['parent_logical_file_name']}
+                        fileEntry['ParentList'].append(parentDict)
+                """
+                files.append(fileEntry)
+                lfn2files[lfn]=len(files)-1
+                
+            # get list of file parents
+            # getting for the full block at once requires some work with list,
+            # but it is much faster
+            if useParent:
+                parentList=api.listFileParents(block_name=blockName)
+                for parent in parentList:
+                    lfn = parent['logical_file_name']
+                    parentLfn = parent['parent_logical_file_name']
+                    indx=lfn2files[lfn]
+                    files[indx]['ParentList'].append({'LogicalFileName':parentLfn})
+            
+            # now query for lumis
+
+            if runselection:
+                res=api.listFileLumis(block_name=blockName, run_num=runselection)
+            else:
+                res=api.listFileLumis(block_name=blockName)
+            #print "filelumis in this block: ", len(res)
+            #print "res[0] = ", res[0]
+            for lumidic in res:
+                lfn=lumidic['logical_file_name']
+                #print 'SB lfn ', lfn
+                # add the info from this lumidic to files
+                indx=lfn2files[lfn]
+                #print indx, files[indx]['LogicalFileName']
+                run=lumidic['run_num']
+                for lumi in lumidic['lumi_section_num']:
+                    lD={}
+                    lD['RunNumber']=run
+                    lD['LumiSectionNumber']=lumi
+                    files[indx]['LumiList'].append(lD)
+            
+                
+        print "WILL RETURN FILES OF LENGTH ", len(files)
+
+        return files
+
 
 
     def getMaxEvents(self):
