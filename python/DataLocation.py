@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os, string, re
 import common
+import urlparse
 from DLSInfo import *
 
 # ####################################
@@ -32,32 +33,66 @@ class DataLocation:
         """
         Contact DLS
         """
-        dlstype=''
 
-        useDBS    = self.cfg_params.get('CMSSW.dbs_url',None)
-        scheduler = self.cfg_params.get('CRAB.scheduler',None).lower()
-        global_url = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+        # make assumption that same host won't be used for both
+        # this check should catch most deployed servers
+        DBS2HOST = 'cmsdbsprod.cern.ch'
+        DBS3HOST = 'cmsweb.cern.ch'
+        useDBS2 = False
+        useDBS3 = False
+        useDAS = False
+
+        global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+        global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+
+        if self.cfg_params.get('CMSSW.use_dbs3'):
+            useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
+        if useDBS3:
+            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
+        else:
+            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+            
 
         # Force show_prod=1 for everybody, grid jobs rely on central black list and t1access role to limit access to T1's
-
-        # Don't switch to DBS just because user specified the global URL in config
-
         self.cfg_params['CMSSW.show_prod'] = 1
-        if useDBS == global_url:
-            useDBS = None
 
-        if useDBS:
-            dlstype='dbs'
-            DLS_type="DLS_TYPE_%s"%dlstype.upper()
-            dls=DLSInfo(DLS_type,self.cfg_params)
-            blockSites = self.PrepareDict(dls)
-        else:
-            dlstype='phedex'
-            DLS_type="DLS_TYPE_%s"%dlstype.upper()
+        if dbs_url==global_dbs2 or dbs_url==global_dbs3:
+            # global DBS has no location info
+            DLS_type="DLS_TYPE_PHEDEX"
             dls=DLSInfo(DLS_type,self.cfg_params)
             blockSites = dls.getReplicasBulk(self.Listfileblocks)
+        else:
+            # assume it is some local scope DBS
+            dbs_endpoint = urlparse.urlsplit(dbs_url)
+            if dbs_endpoint.hostname == DBS3HOST:
+                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
+            elif dbs_endpoint.hostname == DBS2HOST:
+                DLS_type="DLS_TYPE_DBS"
+                dls=DLSInfo(DLS_type,self.cfg_params)
+                blockSites = self.PrepareDict(dls)
+            else:
+                msg = "UNKNOWN DBS END POINT: %s\n" % dbs_url
+                raise DataLocationError(msg)
 
         self.SelectedSites = blockSites
+
+# #######################################################################
+
+    def getBlockSitesFromLocalDBS3(self,dbs_url):
+
+        ## find the location for each block in the list
+        from dbs.apis.dbsClient import DbsApi
+        api = DbsApi(dbs_url)
+
+        blockSites = {}
+        for block in self.Listfileblocks:
+            blockInfo=api.listBlocks(block_name=block,detail=True)
+            location=blockInfo[0]['origin_site_name']
+            blockSites[block] = [location]
+
+        return blockSites
+
+# #######################################################################
 
     def PrepareDict(self,dls):
         ## find the replicas for each block
