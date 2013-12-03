@@ -124,13 +124,13 @@ class DataDiscovery:
         global_dbs2="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
         global_dbs3="https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
 
-        if self.cfg_params.get('CMSSW.use_dbs3'):
-            useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
+        if self.cfg_params.get('CMSSW.use_dbs2'):
+            useDBS2 = int(self.cfg_params.get('CMSSW.use_dbs2'))==1
 
-        if useDBS3:
-            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
-        else:
+        if useDBS2:
             dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+        else:
+            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
             
         common.logger.info("Accessing DBS at: "+dbs_url)
 
@@ -148,15 +148,11 @@ class DataDiscovery:
         if self.cfg_params.get('CMSSW.use_das'):
             useDAS = int(self.cfg_params.get('CMSSW.use_das'))==1
 
-        #if self.cfg_params.get('CMSSW.use_dbs3'):
-        #    useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
-        #    if useDBS3 : useDBS2=False
 
         if useDBS2:
             common.logger.info("Will do Data Discovery using  DBS2")
         if useDBS3:
             common.logger.info("Will do Data Discovery using  DBS3")
-            localScopeDBS3 = not "global" in dbs_url
         if useDAS :
             common.logger.info("will use DAS to talk to DBS")
 
@@ -213,7 +209,7 @@ class DataDiscovery:
         elif useDBS3 :
             from dbs.apis.dbsClient import DbsApi
             api = DbsApi(dbs_url)
-            self.files = self.queryDbs3(api,path=self.datasetPath,runselection=runselection,useParent=useparent,localScopeDBS3=localScopeDBS3)
+            self.files = self.queryDbs3(api,path=self.datasetPath,runselection=runselection,useParent=useparent)
         elif useDAS :
             self.files = self.queryDas(path=self.datasetPath,runselection=runselection,useParent=useparent)
 
@@ -253,6 +249,10 @@ class DataDiscovery:
                 # asked retry the list of parent for the given child
                 if useparent==1:
                     parList = [x['LogicalFileName'] for x in file['ParentList']]
+                #print "SB+++++++++++++++++++++++++++++++++++++"
+                #print "SB parList"
+                #print parList
+                #print "SB+++++++++++++++++++++++++++++++++++++"
                 if self.splitByLumi:
                     fileLumis = [ (x['RunNumber'], x['LumiSectionNumber'])
                                  for x in file['LumiList'] ]
@@ -343,8 +343,7 @@ class DataDiscovery:
         return files
 
 
-    def queryDbs3(self,api,path=None,runselection=None,useParent=None,
-                  localScopeDBS3=False):
+    def queryDbs3(self,api,path=None,runselection=None,useParent=None):
         
 
         files=[]  # structure to return, named "files" in the caller
@@ -380,8 +379,6 @@ class DataDiscovery:
                 fileEntry['Block']={}
                 fileEntry['Block']['Name']=blockName
                 fileEntry['Block']['StorageElementList']=[]  # needed so that can extend in Splitter.py
-                #if localScopeDBS3:
-                #    fileEntry['Block']['StorageElementList'].append(block['origin_site_name'])
                 fileEntry['LumiList']=[]
                 fileEntry['ParentList']=[]
                 # this is simple, byt very slow
@@ -399,12 +396,15 @@ class DataDiscovery:
             # getting for the full block at once requires some work with list,
             # but it is much faster
             if useParent:
-                parentList=api.listFileParents(block_name=blockName)
-                for parent in parentList:
-                    lfn = parent['logical_file_name']
-                    parentLfn = parent['parent_logical_file_name']
-                    indx=lfn2files[lfn]
-                    files[indx]['ParentList'].append({'LogicalFileName':parentLfn})
+                FileParentList=api.listFileParents(block_name=blockName)
+                for FileParentEntry in FileParentList:
+                    lfn = FileParentEntry['logical_file_name']
+                    indx=lfn2files[lfn]  # ptr to this LFN info in the files structure
+
+                    # need to turn this list of LFN's into a list of dict. for
+                    # compatibility with code used to DBS2
+                    for parentFile in FileParentEntry['parent_logical_file_name']:
+                        files[indx]['ParentList'].append({'LogicalFileName':parentFile})
             
             # now query for lumis
 
@@ -473,6 +473,8 @@ class DataDiscovery:
         """
         return parent grouped by file
         """
+        print "SB getParent called"
+
         return self.parent
 
 
