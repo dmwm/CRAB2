@@ -118,32 +118,70 @@ class DataDiscovery:
         DBS3HOST = 'cmsweb.cern.ch'
         useDBS2 = False
         useDBS3 = False
+        verifyDBS23 = False
         useDAS = False
 
-        ## get DBS URL
-        global_dbs2="http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
-        global_dbs3="https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+        # knwon DBS end-points
+        
+        global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+        global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+        local_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet"
+        local_dbs2_02 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_02/servlet/DBSServlet"
+        local_dbs3_01 = "https://cmsweb.cern.ch/dbs/prod/phys01/DBSReader"
+        local_dbs3_02 = "https://cmsweb.cern.ch/dbs/prod/phys02/DBSReader"
+        local_dbs3_03 = "https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader"
 
-        if self.cfg_params.get('CMSSW.use_dbs2'):
-            useDBS2 = int(self.cfg_params.get('CMSSW.use_dbs2'))==1
 
-        if useDBS2:
-            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
-        else:
-            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
-            
+        ## get DBS URL specified by user (default to global DBS2)
+        dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+        
+        ## correspondence maps of DBS2/3 isntances
+        dbs2to3={}
+        dbs3to2={}
+        dbs2to3[global_dbs2] = global_dbs3
+        dbs2to3[local_dbs2_01] = local_dbs3_01
+        dbs2to3[local_dbs2_02] = local_dbs3_02
+        dbs3to2[global_dbs3] = global_dbs2
+        dbs3to2[local_dbs3_01] = local_dbs2_01
+        dbs3to2[local_dbs3_02] = local_dbs2_02
+
+        if self.cfg_params.get('CMSSW.use_dbs3'):
+            useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
+
+        if self.cfg_params.get('CMSSW.verify_dbs23'):
+            verifyDBS23 = int(self.cfg_params.get('CMSSW.verify_dbs23'))==1
+
+        #if useDBS3:
+        #    dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
+        #else:
+        
+        # support shortcuts for local scope DBS's
+        if "analysis_01" in dbs_url:  dbs_url=local_dbs2_01
+        if "analysis_02" in dbs_url:  dbs_url=local_dbs2_02
+        if "phys01" in dbs_url:       dbs_url=local_dbs3_01
+        if "phys02" in dbs_url:       dbs_url=local_dbs3_02
+        if "phys03" in dbs_url:       dbs_url=local_dbs3_03
+
+        # if user asked for DBS3, remap DBS url
+        if useDBS3:
+            dbs_url = dbs2to3 [dbs_url]
+
+
         common.logger.info("Accessing DBS at: "+dbs_url)
-
         endpoint_components = urlparse.urlsplit(dbs_url)
 
         if endpoint_components.hostname == DBS3HOST:
             useDBS3=True
+            dbs_url_3 = dbs_url
+            dbs_url_2 = dbs3to2[dbs_url]
         elif endpoint_components.hostname == DBS2HOST:
             useDBS2=True
+            dbs_url_2 = dbs_url
+            dbs_url_3 = dbs2to3[dbs_url]
 
         if useDBS2 and useDBS3:
-            print "trying to use DBS2 and DBS3 at same time ?"
-            raise exception
+            msg = "trying to use DBS2 and DBS3 at same time ?"
+            raise  CrabException(msg)
 
         if self.cfg_params.get('CMSSW.use_das'):
             useDAS = int(self.cfg_params.get('CMSSW.use_das'))==1
@@ -155,6 +193,8 @@ class DataDiscovery:
             common.logger.info("Will do Data Discovery using  DBS3")
         if useDAS :
             common.logger.info("will use DAS to talk to DBS")
+        if verifyDBS23:
+            common.logger.info("Will verify that DBS2 and DBS3 return same information")
 
 
         ## check if runs are selected
@@ -190,36 +230,53 @@ class DataDiscovery:
 
         ## service API
         args = {}
-        args['url']     = dbs_url
+        args['url']     = dbs_url_2
         args['level']   = 'CRITICAL'
 
         ## check if has been requested to use the parent info
         useparent = int(self.cfg_params.get('CMSSW.use_parent',0))
 
-        ## check if has been asked for a non default file to store/read analyzed fileBlocks
-        defaultName = common.work_space.shareDir()+'AnalyzedBlocks.txt'
-        fileBlocks_FileName = os.path.abspath(self.cfg_params.get('CMSSW.fileblocks_file',defaultName))
 
-        if useDBS2 :
+        defaultName = common.work_space.shareDir()+'AnalyzedBlocks.txt'
+        ## check if has been asked for a non default file to store/read analyzed fileBlocks
+        #SB no no, we do not want this, it is not even documented !
+        #fileBlocks_FileName = os.path.abspath(self.cfg_params.get('CMSSW.fileblocks_file',defaultName))
+        if self.cfg_params.get('CMSSW.fileblocks_file') :
+            msg = "CMSSW.fileblocks_file option non supported"
+            raise CrabException(msg)
+        fileBlocks_FileName = os.path.abspath(defaultName)
+
+        if useDBS2 or verifyDBS23:
+            common.logger.info("looking up DBS2 ...")
             import DBSAPI.dbsApi
             #from DBSAPI.dbsApiException import *
             import DBSAPI.dbsApiException
-            api = DBSAPI.dbsApi.DbsApi(args)
-            self.files = self.queryDbs(api,path=self.datasetPath,runselection=runselection,useParent=useparent)
-        elif useDBS3 :
+            api2 = DBSAPI.dbsApi.DbsApi(args)
+            files2 = self.queryDbs(api2,path=self.datasetPath,runselection=runselection,useParent=useparent)
+            if useDBS2:
+                self.files = files2
+        if useDBS3 or verifyDBS23:
+            common.logger.info("looking up DBS3 ...")
             from dbs.apis.dbsClient import DbsApi
-            api = DbsApi(dbs_url)
-            self.files = self.queryDbs3(api,path=self.datasetPath,runselection=runselection,useParent=useparent)
-        elif useDAS :
+            api3 = DbsApi(dbs_url_3)
+            files3 = self.queryDbs3(api3,path=self.datasetPath,runselection=runselection,useParent=useparent)
+            if useDBS3:
+                self.files = files3
+        if useDAS :
             self.files = self.queryDas(path=self.datasetPath,runselection=runselection,useParent=useparent)
+
+        if verifyDBS23:
+            if self.compareFilesStructure(files2,files3):
+                common.logger.info("ERROR: DBS2 - DB3 comparsion failed, please run crab -uploadLog and report to crabFeedback")
+        
 
         # Check to see what the dataset is
         pdsName = self.datasetPath.split("/")[1]
         if useDBS2 :
-            primDSs = api.listPrimaryDatasets(pdsName)
+            primDSs = api2.listPrimaryDatasets(pdsName)
             dataType = primDSs[0]['Type']
         elif useDBS3 :
-            dataType=api.listDataTypes(dataset=self.datasetPath)[0]['data_type']
+            dataType=api3.listDataTypes(dataset=self.datasetPath)[0]['data_type']
 
         common.logger.info("Datatype is %s" % dataType)
         if dataType == 'data' and not \
@@ -233,26 +290,17 @@ class DataDiscovery:
         anFileBlocks = []
         if self.skipBlocks: anFileBlocks = readTXTfile(self, fileBlocks_FileName)
 
-        print "SB+++++++++++++++++++++++++++++++++++++++++++"
-        print self.files[0]['ParentList']
-        print "SB+++++++++++++++++++++++++++++++++++++++++++"
-
         # parse files and fill arrays
         for file in self.files :
             parList  = []
             fileLumis = [] # List of tuples
             # skip already analyzed blocks
             fileblock = file['Block']['Name']
-            #print "SB fileblock = ", fileblock
             if fileblock not in anFileBlocks :
                 filename = file['LogicalFileName']
                 # asked retry the list of parent for the given child
                 if useparent==1:
                     parList = [x['LogicalFileName'] for x in file['ParentList']]
-                #print "SB+++++++++++++++++++++++++++++++++++++"
-                #print "SB parList"
-                #print parList
-                #print "SB+++++++++++++++++++++++++++++++++++++"
                 if self.splitByLumi:
                     fileLumis = [ (x['RunNumber'], x['LumiSectionNumber'])
                                  for x in file['LumiList'] ]
@@ -338,7 +386,7 @@ class DataDiscovery:
         except DBSError, msg:
             raise DataDiscoveryError(msg)
 
-        print "WILL RETURN FILES OF LENGTH ", len(files)
+        #common.logger.info("DBS2 IS RETURNING FILES OF LENGTH %s" % len(files))
         
         return files
 
@@ -358,7 +406,6 @@ class DataDiscovery:
 
         for block in result:
             blockName = block['block_name']
-            print "SB blockName: ", blockName
 
             # get list of files, and for each #events and parent, then
             # will get filelumis
@@ -412,14 +459,10 @@ class DataDiscovery:
                 res=api.listFileLumis(block_name=blockName, run_num=runselection)
             else:
                 res=api.listFileLumis(block_name=blockName)
-            #print "filelumis in this block: ", len(res)
-            #print "res[0] = ", res[0]
             for lumidic in res:
                 lfn=lumidic['logical_file_name']
-                #print 'SB lfn ', lfn
                 # add the info from this lumidic to files
                 indx=lfn2files[lfn]
-                #print indx, files[indx]['LogicalFileName']
                 run=lumidic['run_num']
                 for lumi in lumidic['lumi_section_num']:
                     lD={}
@@ -428,9 +471,30 @@ class DataDiscovery:
                     files[indx]['LumiList'].append(lD)
             
                 
-        print "WILL RETURN FILES OF LENGTH ", len(files)
+        #common.logger.info("DBS3 IS RETURNING FILES OF LENGTH %s" % len(files))
 
         return files
+
+
+
+
+    def compareFilesStructure(self, f2, f3):
+        """
+        compare self.files structures
+        limit comparison to the parts that are actually used
+        and thus filled by queryDBS3
+        """
+        compareStatus = True
+        common.logger.info("Compare dataset information retrieved from DBS2 and DBS3 ...")
+
+        # at the very least there must be same number of files
+        if compareStatus:
+            compareStatus = len(f2) == len(f3)
+
+        common.logger.info("Comparison was succesfull")
+        
+        return compareStatus
+
 
 
 
@@ -473,8 +537,6 @@ class DataDiscovery:
         """
         return parent grouped by file
         """
-        print "SB getParent called"
-
         return self.parent
 
 
