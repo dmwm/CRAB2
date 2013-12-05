@@ -266,7 +266,7 @@ class DataDiscovery:
             self.files = self.queryDas(path=self.datasetPath,runselection=runselection,useParent=useparent)
 
         if verifyDBS23:
-            if self.compareFilesStructure(files2,files3):
+            if not self.compareFilesStructure(files2,files3):
                 common.logger.info("ERROR: DBS2 - DB3 comparsion failed, please run crab -uploadLog and report to crabFeedback")
         
 
