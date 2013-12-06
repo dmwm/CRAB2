@@ -14,7 +14,7 @@ echo "CRABDIR = $CRABdir"
 CRABtag=$tag
 DBSAPItag="DBS_2_0_9_patch_9"
 DLSAPItag="DLS_1_1_3"
-PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_57"
+PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_58"
 WMCOREtag="WMCORE_CRAB2_3"
 DBS3tag="DBS_3_1_8"
 
@@ -84,9 +84,6 @@ rm -rf WMCore-legacy
 #
 
 git clone -b ${DBS3tag} https://github.com/dmwm/DBS.git DBS3
-pushd DBS3/Client/src/python/dbs/apis
-cp -v /afs/cern.ch/user/b/belforte/WORK/SALVATI/dbsClient.py .
-popd
 
 mkdir dbs3client
 mv DBS3/PycurlClient/src/python/* ./dbs3client/
