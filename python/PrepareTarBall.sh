@@ -14,7 +14,7 @@ echo "CRABDIR = $CRABdir"
 CRABtag=$tag
 DBSAPItag="DBS_2_0_9_patch_9"
 DLSAPItag="DLS_1_1_3"
-PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_57"
+PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_58"
 WMCOREtag="WMCORE_CRAB2_3"
 DBS3tag="DBS_3_1_8"
 
@@ -30,7 +30,7 @@ cd $CRABdir
 chmod -x python/crab.py
 rm python/crab.*sh
 mv python/configure .
-
+rm -rf .git
 
 # SB -- this is likely not needed
 ## create etc subdir for admin config file
@@ -84,6 +84,7 @@ rm -rf WMCore-legacy
 #
 
 git clone -b ${DBS3tag} https://github.com/dmwm/DBS.git DBS3
+
 mkdir dbs3client
 mv DBS3/PycurlClient/src/python/* ./dbs3client/
 mv DBS3/Client/src/python/* ./dbs3client/
