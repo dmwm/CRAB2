@@ -30,7 +30,7 @@ cd $CRABdir
 chmod -x python/crab.py
 rm python/crab.*sh
 mv python/configure .
-
+rm -rf .git
 
 # SB -- this is likely not needed
 ## create etc subdir for admin config file
@@ -84,6 +84,10 @@ rm -rf WMCore-legacy
 #
 
 git clone -b ${DBS3tag} https://github.com/dmwm/DBS.git DBS3
+pushd DBS3/Client/src/python/dbs/apis
+cp -v /afs/cern.ch/user/b/belforte/WORK/SALVATI/dbsClient.py .
+popd
+
 mkdir dbs3client
 mv DBS3/PycurlClient/src/python/* ./dbs3client/
 mv DBS3/Client/src/python/* ./dbs3client/
