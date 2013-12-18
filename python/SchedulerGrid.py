@@ -233,7 +233,7 @@ class SchedulerGrid(Scheduler):
         txt += '    SyncCE="${CE_ID}" \n'
         txt += 'elif [ "$GLIDEIN_Gatekeeper" ]; then \n'        # beware: GLIDEIN_gatekeeper may have blanks
         txt += '    echo "getting SyncCE from GLIDEIN_Gaekeeper" \n'
-        txt += '    GKtmp="`echo $GLIDEIN_Gatekeeper | sed -e s,http's\?'://,,`"\n' # remove leading http[s]:// if any
+        txt += '    GKtmp="`echo $GLIDEIN_Gatekeeper | sed -e s,http\'s\?\'://,,`"\n' # remove leading http[s]:// if any
         txt += '    SyncCE="`echo $GKtmp | cut -d: -f1`" \n'
         txt += 'else \n'
         txt += '    echo "getting SyncCE glite-brokerinfo" \n'
