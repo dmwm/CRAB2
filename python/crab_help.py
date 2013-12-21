@@ -593,6 +593,15 @@ By setting the flag I<subscribed> = 1 only the replicas that are subscribed to i
 
 To remove fileblock boundaries in job splitting specify I<no_block_boundary> = 1. Default value = 0.
 
+=head3 B<use_dbs3>
+
+To use DBS3 for data discovery: I<use_dbs3> = 1. Default value = 0. DBS2 local scope analysis_01/02 will be automatically mapped to DBS3 phys_01/02.
+Alternatively use I<dbs_url> to indicate an explicit DBS3 endpoint
+
+=head3 B<verify_dbs23>
+
+To use verify data discovery information retrieved from DBS2 and DBS3:  I<verify_dbs23> = 1. Will not affect which DBS is used for task creation, but will read from the other as well and compare retrieved informations.
+
 =head2 B<[USER]>
 
 =head3 B<additional_input_files>
