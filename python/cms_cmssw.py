@@ -1265,14 +1265,16 @@ class Cmssw(JobType):
                 if self.executable_arch == arch and self.version == release:
                     goodRelease = True
                     return goodRelease
-
-            if not goodRelease:
-                msg = "WARNING: %s on %s is not among supported releases listed at %s ." % \
-                        (self.version, self.executable_arch, tagCollectorUrl)
-                msg += "Submission may fail."
-                common.logger.info(msg)
         except:
             common.logger.info("Problems parsing file of allowed CMSSW releases.")
+
+        if not goodRelease and \
+            not self.cfg_params.get('CMSSW.allowNonProductionCMSSW',0)=="1" :
+            msg = "ERROR: %s on %s is not among supported releases listed at \n %s ." % (self.version, self.executable_arch, tagCollectorUrl)
+            msg += "\n   If you are sure of what you are doing you can set"
+            msg += "\n      allowNonProductionCMSSW = 1"
+            msg += "\n   in the [CMSSW] section of crab.cfg."
+            raise CrabException(msg)
 
         return goodRelease
 

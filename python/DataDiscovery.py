@@ -11,7 +11,9 @@ try: # Can remove when CMSSW 3.7 and earlier are dropped
 except ImportError:
     from LumiList import LumiList
 
-import os
+
+from DBSAPI.dbsApiException import *
+import os, time
 import urlparse
 
 
@@ -141,9 +143,14 @@ class DataDiscovery:
         dbs2to3[global_dbs2] = global_dbs3
         dbs2to3[local_dbs2_01] = local_dbs3_01
         dbs2to3[local_dbs2_02] = local_dbs3_02
+        dbs2to3[local_dbs3_01] = local_dbs3_01
+        dbs2to3[local_dbs3_02] = local_dbs3_02
+        dbs2to3[local_dbs3_03] = local_dbs3_03
         dbs3to2[global_dbs3] = global_dbs2
         dbs3to2[local_dbs3_01] = local_dbs2_01
         dbs3to2[local_dbs3_02] = local_dbs2_02
+        dbs3to2[local_dbs2_01] = local_dbs2_01
+        dbs3to2[local_dbs2_02] = local_dbs2_02
 
         if self.cfg_params.get('CMSSW.use_dbs3'):
             useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
@@ -151,10 +158,6 @@ class DataDiscovery:
         if self.cfg_params.get('CMSSW.verify_dbs23'):
             verifyDBS23 = int(self.cfg_params.get('CMSSW.verify_dbs23'))==1
 
-        #if useDBS3:
-        #    dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
-        #else:
-        
         # support shortcuts for local scope DBS's
         if "analysis_01" in dbs_url:  dbs_url=local_dbs2_01
         if "analysis_02" in dbs_url:  dbs_url=local_dbs2_02
@@ -162,15 +165,15 @@ class DataDiscovery:
         if "phys02" in dbs_url:       dbs_url=local_dbs3_02
         if "phys03" in dbs_url:       dbs_url=local_dbs3_03
 
-        # if user asked for DBS3, remap DBS url
+        # if user asked for DBS3, remap DBS url if needed
         if useDBS3:
             dbs_url = dbs2to3 [dbs_url]
-
-
         common.logger.info("Accessing DBS at: "+dbs_url)
+
+
         endpoint_components = urlparse.urlsplit(dbs_url)
 
-        if endpoint_components.hostname == DBS3HOST:
+        if endpoint_components.hostname == DBS3HOST or useDBS3:
             useDBS3=True
             dbs_url_3 = dbs_url
             dbs_url_2 = dbs3to2[dbs_url]
@@ -178,7 +181,7 @@ class DataDiscovery:
             useDBS2=True
             dbs_url_2 = dbs_url
             dbs_url_3 = dbs2to3[dbs_url]
-
+        
         if useDBS2 and useDBS3:
             msg = "trying to use DBS2 and DBS3 at same time ?"
             raise  CrabException(msg)
@@ -247,19 +250,24 @@ class DataDiscovery:
         fileBlocks_FileName = os.path.abspath(defaultName)
 
         if useDBS2 or verifyDBS23:
-            common.logger.info("looking up DBS2 ...")
+            #common.logger.info("looking up DBS2 ...")
             import DBSAPI.dbsApi
-            #from DBSAPI.dbsApiException import *
             import DBSAPI.dbsApiException
+            start_time=time.time()
             api2 = DBSAPI.dbsApi.DbsApi(args)
             files2 = self.queryDbs(api2,path=self.datasetPath,runselection=runselection,useParent=useparent)
+            elapsed=time.time() - start_time
+            common.logger.info("DBS2 lookup took %5.2f sec" % elapsed)
             if useDBS2:
                 self.files = files2
         if useDBS3 or verifyDBS23:
-            common.logger.info("looking up DBS3 ...")
+            #common.logger.info("looking up DBS3 ...")
             from dbs.apis.dbsClient import DbsApi
+            start_time=time.time()
             api3 = DbsApi(dbs_url_3)
             files3 = self.queryDbs3(api3,path=self.datasetPath,runselection=runselection,useParent=useparent)
+            elapsed=time.time() - start_time
+            common.logger.info("DBS3 lookup took %5.2f sec" % elapsed)
             if useDBS3:
                 self.files = files3
         if useDAS :
@@ -352,8 +360,9 @@ class DataDiscovery:
         allowedRetriveValue = []
         if self.splitByLumi or self.splitByRun or useParent == 1:
             allowedRetriveValue.extend(['retrive_block', 'retrive_run'])
-        if self.splitByLumi:
-            allowedRetriveValue.append('retrive_lumi')
+        #if self.splitByLumi:
+        #    allowedRetriveValue.append('retrive_lumi')
+        allowedRetriveValue.append('retrive_lumi')
         if useParent == 1:
             allowedRetriveValue.append('retrive_parent')
         common.logger.debug("Set of input parameters used for DBS query: %s" % allowedRetriveValue)
@@ -428,14 +437,7 @@ class DataDiscovery:
                 fileEntry['Block']['StorageElementList']=[]  # needed so that can extend in Splitter.py
                 fileEntry['LumiList']=[]
                 fileEntry['ParentList']=[]
-                # this is simple, byt very slow
-                """
-                if useParent:
-                    parentList=api.listFileParents(logical_file_name=lfn)
-                    for parent in parentList:
-                        parentDict={'LogicalFileName':parent['parent_logical_file_name']}
-                        fileEntry['ParentList'].append(parentDict)
-                """
+
                 files.append(fileEntry)
                 lfn2files[lfn]=len(files)-1
                 
@@ -455,10 +457,12 @@ class DataDiscovery:
             
             # now query for lumis
 
-            if runselection:
-                res=api.listFileLumis(block_name=blockName, run_num=runselection)
-            else:
-                res=api.listFileLumis(block_name=blockName)
+            # to be able to verify with DBS2, do not use runselection
+            #if runselection:
+            #    res=api.listFileLumis(block_name=blockName, run_num=runselection)
+            #else:
+            #    res=api.listFileLumis(block_name=blockName)
+            res=api.listFileLumis(block_name=blockName)
             for lumidic in res:
                 lfn=lumidic['logical_file_name']
                 # add the info from this lumidic to files
@@ -475,23 +479,105 @@ class DataDiscovery:
 
         return files
 
-
-
-
     def compareFilesStructure(self, f2, f3):
         """
         compare self.files structures
         limit comparison to the parts that are actually used
         and thus filled by queryDBS3
         """
-        compareStatus = True
-        common.logger.info("Compare dataset information retrieved from DBS2 and DBS3 ...")
+        compareStatus = False
+        common.logger.info("Compare dataset information retrieved from DBS2 and DBS3 ... on %d files" % len(f2))
 
         # at the very least there must be same number of files
-        if compareStatus:
-            compareStatus = len(f2) == len(f3)
+        if len(f2) == len(f3):
+            compareStatus = True
+        else:
+            common.logger.info("DBS2/DBS3 mismatch: number of files differ")
 
-        common.logger.info("Comparison was succesfull")
+        if compareStatus:
+            # make sure list of LFN is the same
+            lfn_list_2 = [x['LogicalFileName'] for x in f2]
+            lfn_list_2.sort()
+            lfn_list_3 = [x['LogicalFileName'] for x in f3]
+            lfn_list_3.sort()
+            if lfn_list_2 == lfn_list_3:
+                "List of LFN's is the same for DBS2/DBS3"
+                compareStatus = True
+            else:
+                common.logger.info("DBS2/DBS3 mismatch: list of LFN's differ")
+
+        if compareStatus:
+            # go through file dictionary list from DBS2
+            for fDic2 in f2:
+                # compare the two dictionaries for each LFN
+
+                lfn=fDic2['LogicalFileName']
+                # find dictionary from DBS3 for same file
+                lfnMatch=False
+                for fileDic in f3:
+                    if fileDic['LogicalFileName'] == lfn:
+                        fDic3=fileDic
+                        break
+
+                # compare block name
+                if not fDic2['Block']['Name'] == fDic3['Block']['Name'] :
+                    compareStatus = False
+                    msg = "DBS2/DBS3 mismatch: BlockName differs"
+                    msg += " for file: \n%s\n" % lfn
+                    msg += "\nfDic2['Block']['Name']=%s" % fDic2['Block']['Name']
+                    msg += "\nfDic3['Block']['Name']=%s" % fDic3['Block']['Name']
+                    common.logger.info(msg)
+                    break
+
+                # compare number of events
+                if not fDic2['NumberOfEvents'] == fDic3['NumberOfEvents'] :
+                    compareStatus = False
+                    msg = "DBS2/DBS3 mismatch: Number Of Events differs"
+                    msg += " for file: \n%s\n" % lfn
+                    msg += "\n=fDic2['NumberOfEvents']= %s" % fDic2['NumberOfEvents']
+                    msg += "\n=fDic3['NumberOfEvents']= %s" % fDic3['NumberOfEvents']
+                    common.logger.info(msg)
+                    break
+
+                # compare number of lumis
+                ll3 = fDic3['LumiList']
+                ll2 = []
+                for ld in fDic2['LumiList']:
+                    trimmed_lumidict={}
+                    for k in ['RunNumber','LumiSectionNumber']:
+                        trimmed_lumidict[k]=ld[k]
+                    ll2.append(trimmed_lumidict)
+                if not len(ll2) == len(ll3) :
+                    compareStatus = False
+                    msg = "DBS2/DBS3 mismatch: Number Of Lumis differs"
+                    msg += " for file: \n%s\n" % lfn
+                    msg += "\n #DBS2= %s" % len(ll2)
+                    msg += "\n #DBS3= %s" % len(ll3)
+                    common.logger.info(msg)
+                    break
+
+                # compare list of lumis
+                # from list of dictionaries to list of ntuples so can sort
+                lu2=[]
+                for ld in ll2:
+                    lu2.append((ld['RunNumber'],ld['LumiSectionNumber']))
+                lu3=[]
+                for ld in ll3:
+                    lu3.append((ld['RunNumber'],ld['LumiSectionNumber']))
+                lu2.sort()
+                lu3.sort()
+                if not lu2 == lu3 :
+                    compareStatus = False
+                    msg = "DBS2/DBS3 mismatch: LumiList differs"
+                    msg += " for file: \n%s\n" % lfn
+                    msg += "\n=fDic2['LumiList']=\n%s" % lu2
+                    msg += "\n=fDic3['LumiList']=\n%s" % lu3
+                    common.logger.info(msg)
+                    break
+
+
+        if compareStatus:
+            common.logger.info("Comparison was succesfull")
         
         return compareStatus
 
