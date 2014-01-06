@@ -201,7 +201,10 @@ def check_fjr(path, fjr, doc_list, fjr_list):
   print "in check_fjr"
   print  "fjr_list = fjr_list"
 
-  doc = minidom.parse(path + '/' + fjr)
+  if path != '':
+      doc = minidom.parse(path + '/' + fjr)
+  else:
+      doc = minidom.parse(fjr)
 
   exe_exit_status=''
   wrapper_exit_status=''
