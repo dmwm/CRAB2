@@ -47,14 +47,14 @@ blockDump['file_parent_list']=[]   # summary list of parents lfn (list)
 # check of fjr "sanity"
 # parsing of "validated" fjr
 # creation of list containing only valid fjrs
-# create_entry_total: i pezzi relativi a info sul dataset che si fa una sola volta
-# create_entry_per_file: parsing dei singoli fjr per info sui files
-# create_block_info: informazioni somma dei singoli file per creare il blocco
+# create_dataset_common_info: create the part of blockDump related to the dataset.
+#       These values are common for each frj in the task (so it is done reading only for the first valid fjr)
+# create_file_info: parsing of each valid fjr to get info about the related output file. 
+# create_block_info: info about the block, as total size, number of files. 
+#       These values are obtained adding the info about each files in the block. 
 # migration of parent (to implement)
 # publication of block
 # report of publication status
-
-#"""
 
 
 def read_res_content(path):
@@ -134,7 +134,7 @@ def get_arg():
           arg_fjrs=read_res_content(fjr_dir)
           print "in get_arg arg_fjrs = ", arg_fjrs
       if o in ("-f", "--fjr"):
-          print "a = ", a
+          print "file = a = ", a
           arg_fjrs.append(a)
           print "arg_fjrs = ", arg_fjrs
       if o in ("-h", "--help"):
@@ -163,18 +163,6 @@ def summary_block_publication(list, pubbl_exit, summary_file):
     else:
         print 'block publication failed'
   
-####
-#### at the end fjr_list = list_already_published
-#### it will be a file in the same dir of xml --> res
-#### to overwrite each times
-#### if arg list is empty or contains only failed jobs --> stop
-
-
-#arg = ['crab_fjr_3.xml', 'crab_fjr_4.xml'] 
-#arg = ['crab_fjr_4.xml'] 
-#l = len(arg)
-#print "l = ",l
-
 doc_list=[]
 fjr_list=[]
 
@@ -303,6 +291,7 @@ def create_blockDump_commonpart(doc, blockDump):
   ### creating dataset_dictionary (this has to be created one time) 
   dataset_dictionary={'physics_group_name':'', 'create_by':'', 'dataset_access_type':'VALID', 'last_modified_by':'', 'creation_date':'', 'xtcrosssection':'', 'last_modification_date':''}
   dataset_dictionary['data_tier_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["data_tier_name"]]
+
   ##### TO ADD:  test adding -v1 to the processed_ds_name #############
   dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]] + '-v1'
   dataset_dictionary['dataset']='/'+FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]+'/'+dataset_dictionary['processed_ds_name']+'/'+dataset_dictionary['data_tier_name']
@@ -461,7 +450,7 @@ if __name__ == "__main__":
 
     # fjr is the name of fjr to publish
     for fjr in arg_list:
-        print "fjr = ", fjr 
+        print "---> fjr = ", fjr 
         doc_list, fjr_list = check_fjr(fjr_dir, fjr, doc_list, fjr_list)
 
     ### list of files ok for publication
@@ -483,10 +472,6 @@ if __name__ == "__main__":
 
     #print "blockDump = ", blockDump
     #print "##############################################################"
-
-    # creates the common part dataset_conf_list about dataset
-    #dataset_conf_list_dictionary = create_dataset_conf_list_dictionary(doc_list[0])
-    #blockDump['dataset_conf_list'].append(dataset_conf_list_dictionary)
 
     # creates the "file" part of blockDump
     block_size=0
@@ -529,12 +514,15 @@ if __name__ == "__main__":
     ###############################################################################
     ###############################################################################
 
-
+    ########################################
+    ### to add the try-except ###
     ###try:
+    ### uncomment the following line to publish the block
     #api.insertBulkBlock(blockDump)
     ###pub_exit = 'True' 
     ###except:
     ###pub_exit = 'False' 
+    ########################################
 
     ### just for test: 
     #pub_exit='True' 
