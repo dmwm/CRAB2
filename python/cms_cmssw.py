@@ -26,6 +26,7 @@ class Cmssw(JobType):
     def __init__(self, cfg_params, ncjobs,skip_blocks, isNew):
         JobType.__init__(self, 'CMSSW')
         common.logger.debug('CMSSW::__init__')
+        
         self.skip_blocks = skip_blocks
         self.argsList = 2
         self.NumEvents=0
@@ -1268,10 +1269,11 @@ class Cmssw(JobType):
         except:
             common.logger.info("Problems parsing file of allowed CMSSW releases.")
 
-        if not goodRelease and int(self.cfg_params.get('CMSSW.allow_nonproductioncmssw',0)) == 0 :
+        if not goodRelease and \
+            not self.cfg_params.get('CMSSW.allow_nonproductioncmssw',0)=="1" :
             msg = "ERROR: %s on %s is not among supported releases listed at \n %s ." % (self.version, self.executable_arch, tagCollectorUrl)
             msg += "\n   If you are sure of what you are doing you can set"
-            msg += "\n      allow_nonproductioncmssw = 1"
+            msg += "\n      allow_NonProductionCMSSW = 1"
             msg += "\n   in the [CMSSW] section of crab.cfg."
             raise CrabException(msg)
 
