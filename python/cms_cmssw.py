@@ -1268,11 +1268,10 @@ class Cmssw(JobType):
         except:
             common.logger.info("Problems parsing file of allowed CMSSW releases.")
 
-        if not goodRelease and \
-            not self.cfg_params.get('CMSSW.allowNonProductionCMSSW',0)=="1" :
+        if not goodRelease and int(self.cfg_params.get('CMSSW.allow_nonproductioncmssw',0)) == 0 :
             msg = "ERROR: %s on %s is not among supported releases listed at \n %s ." % (self.version, self.executable_arch, tagCollectorUrl)
             msg += "\n   If you are sure of what you are doing you can set"
-            msg += "\n      allowNonProductionCMSSW = 1"
+            msg += "\n      allow_nonproductioncmssw = 1"
             msg += "\n   in the [CMSSW] section of crab.cfg."
             raise CrabException(msg)
 
