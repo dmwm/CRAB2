@@ -16,6 +16,7 @@ proxy=os.environ.get('SOCKS5_PROXY')
 url='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
 api = DbsApi(url=url, proxy=proxy)
 
+#adding global DBS to read info about dataset
 url_reader='https://cmsweb-testbed.cern.ch/dbs/prod/global/DBSReader'
 api_reader=DbsApi(url=url_reader, proxy=proxy)
 
