@@ -7,25 +7,17 @@ from dbs.apis.dbsClient import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
 
 
-#########################################
-### test to writing in DBS3
-### use the vocms174 machine under lxplus
-#import unittest
-#from dbs.apis.dbsClient import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
-#from ctypes import *
-#import json
 
 #url=os.environ['DBS_WRITER_URL']
 proxy=os.environ.get('SOCKS5_PROXY')
 
 #proxy='/tmp/x509up_u6414'
 url='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
-
 api = DbsApi(url=url, proxy=proxy)
-#print "Done inserting child files"
-#########################################
 
+url_reader='https://cmsweb-testbed.cern.ch/dbs/prod/global/DBSReader'
+api_reader=DbsApi(url=url_reader, proxy=proxy)
 
 ### general dictionary with info about all the fjrs to publish ###
 blockDump={}
@@ -56,6 +48,27 @@ blockDump['file_parent_list']=[]   # summary list of parents lfn (list)
 # publication of block
 # report of publication status
 
+doc_list=[]
+fjr_list=[]
+
+### traslation's dictionaries for DBS3:  key is DBS3 name: value is the fjr tag 
+### tag in <File>  
+translation_File={"lfn":"LFN", "logical_file_name":"LFN", "check_sum":"Checksum", "event_count":"TotalEvents", "file_type":"FileType", "origin_site_name":"SEName", "file_size":"Size"}
+#print "translation_File = ", translation_File
+
+### tag in <File><Datasets><DatasetInfo> 
+translation_DatasetInfo={"release_version":"ApplicationVersion", "pset_hash":"PSetHash", "app_name":"ApplicationName", "primary_ds_name":"PrimaryDataset", "data_tier_name":"DataTier", "processed_ds_name":"ProcessedDataset"}
+#print "translation_DatasetInfo = ", translation_DatasetInfo
+
+### tag in <File><Inputs><Input>
+#translation_FileInputsInput={"parent_logical_file_name":"LFN"}
+#print "translation_FileInputsInput = ", translation_FileInputsInput
+
+### tag in <File><Runs> 
+#translation_FileRuns={"lumi_section_num":"LumiSection","run_num":"Run"}
+#print translation_FileRuns
+###########
+
 
 def read_res_content(path):
 
@@ -68,7 +81,6 @@ def read_res_content(path):
       if (str.find(file,".xml") != -1):
           list_fjr_in_dir.append(file)
   #print "list_fjr_in_dir = ", list_fjr_in_dir
-  ###
   
   #####################
   # JUST A TEST
@@ -143,12 +155,8 @@ def get_arg():
           print "  -c, --continue name of crab task ' looks inside the res dir to discover fjr files"
           print "  -f, --fjr specify the complete path of a fjr to publish"
           print "  -h, --help help of the script"
-          #print __doc__
 
   return arg_fjrs, fjr_dir        
-          #sys.exit(0)
-
-  #exit()
   
 def summary_block_publication(list, pubbl_exit, summary_file):
     print "summary_file = ", summary_file
@@ -163,28 +171,6 @@ def summary_block_publication(list, pubbl_exit, summary_file):
     else:
         print 'block publication failed'
   
-doc_list=[]
-fjr_list=[]
-
-### traslation's dictionaries for DBS3:  key is DBS3 name: value is the fjr tag 
-### tag in <File>  
-translation_File={"lfn":"LFN", "logical_file_name":"LFN", "check_sum":"Checksum", "event_count":"TotalEvents", "file_type":"FileType", "origin_site_name":"SEName", "file_size":"Size"}
-#print "translation_File = ", translation_File
-
-### tag in <File><Datasets><DatasetInfo> 
-translation_DatasetInfo={"release_version":"ApplicationVersion", "pset_hash":"PSetHash", "app_name":"ApplicationName", "primary_ds_name":"PrimaryDataset", "data_tier_name":"DataTier", "processed_ds_name":"ProcessedDataset"}
-#print "translation_DatasetInfo = ", translation_DatasetInfo
-
-### tag in <File><Inputs><Input>
-#translation_FileInputsInput={"parent_logical_file_name":"LFN"}
-#print "translation_FileInputsInput = ", translation_FileInputsInput
-
-### tag in <File><Runs> 
-#translation_FileRuns={"lumi_section_num":"LumiSection","run_num":"Run"}
-#print translation_FileRuns
-###########
-
-#####################################################################################
 def check_fjr(path, fjr, doc_list, fjr_list):
   print "in check_fjr"
   print  "fjr_list = fjr_list"
@@ -226,8 +212,6 @@ def check_fjr(path, fjr, doc_list, fjr_list):
 
   return doc_list, fjr_list
 
-
-##################################################################################
 def create_blockDump_commonpart(doc, blockDump):
 
   print "in create_blockDump_commonpart"
@@ -279,9 +263,23 @@ def create_blockDump_commonpart(doc, blockDump):
   #return blockDump 
 
   ### creating primds_dictionary (this has to be created one time)
-  #### TO ADD:the type of primary dataset, just for test mc ############
-  primds_dictionary={'create_by':'', 'primary_ds_type':'mc', 'creation_date':''}
+  primds_dictionary={}
   primds_dictionary['primary_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]
+  
+  #print "##############################################################"
+  #print "primds_dictionary = ", primds_dictionary['primary_ds_name']
+  type = api_reader.listPrimaryDatasets(primary_ds_name=primds_dictionary['primary_ds_name'])
+  #print "type = ", type
+  #print "type[0]['create_by']= ", type[0]['create_by']
+  #print "type[0]['creation_date']= ", type[0]['creation_date']
+  #print "type[0]['primary_ds_type']= ", type[0]['primary_ds_type']
+
+  primds_dictionary['create_by']=type[0]['create_by']
+  primds_dictionary['primary_ds_type']=type[0]['primary_ds_type']
+  primds_dictionary['creation_date']=type[0]['creation_date']
+  #print "primds_dictionary = ", primds_dictionary
+  #print "##############################################################"
+  #exit()
   #print primds_dictionary
 
   blockDump['primds']=primds_dictionary
@@ -292,8 +290,8 @@ def create_blockDump_commonpart(doc, blockDump):
   dataset_dictionary={'physics_group_name':'', 'create_by':'', 'dataset_access_type':'VALID', 'last_modified_by':'', 'creation_date':'', 'xtcrosssection':'', 'last_modification_date':''}
   dataset_dictionary['data_tier_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["data_tier_name"]]
 
-  ##### TO ADD:  test adding -v1 to the processed_ds_name #############
-  dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]] + '-v1'
+  dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]] + '-v' + processing_era_dictionary['processing_version']
+  #print "dataset_dictionary['processed_ds_name'] = ",  dataset_dictionary['processed_ds_name']
   dataset_dictionary['dataset']='/'+FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]+'/'+dataset_dictionary['processed_ds_name']+'/'+dataset_dictionary['data_tier_name']
   #print dataset_dictionary
 
