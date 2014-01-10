@@ -1,24 +1,34 @@
 from xml.dom import minidom
 import sys
-#import string
 import getopt
 import uuid
+import time
 from dbs.apis.dbsClient import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
 
+### local DBS3 where to publish the user dataset
+#url_local_writer='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
+url_local_writer='https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter'
+dbs3api_local = DbsApi(url=url_local_writer)
+#### it was 
+#url='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
+#api = DbsApi(url=url, proxy=proxy)
+#########################################
 
-from RestClient.ErrorHandling.RestClientExceptions import HTTPError
+### global DBS3 from where read info about parents
+url_global_reader='https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
+dbs3api_global= DbsApi(url=url_global_reader)
+#dbs3api_global= DbsApi(url=url_local_writer)
+### it was
+#url_reader='https://cmsweb-testbed.cern.ch/dbs/prod/global/DBSReader'
+#api_reader=DbsApi(url=url_reader, proxy=proxy)
+###########################################
 
-#url=os.environ['DBS_WRITER_URL']
-proxy=os.environ.get('SOCKS5_PROXY')
-
-#proxy='/tmp/x509up_u6414'
-url='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
-api = DbsApi(url=url, proxy=proxy)
-
-#adding global DBS to read info about dataset
-url_reader='https://cmsweb-testbed.cern.ch/dbs/prod/global/DBSReader'
-api_reader=DbsApi(url=url_reader, proxy=proxy)
+### migration from global to local
+#url_migrate='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSMigrate'
+url_migrate='https://cmsweb.cern.ch/dbs/prod/phys03/DBSMigrate'
+dbs3api_migrate=DbsApi(url=url_migrate)
+##########################################
 
 ### general dictionary with info about all the fjrs to publish ###
 blockDump={}
@@ -145,7 +155,7 @@ def get_arg():
           else: fjr_dir = a    
           print "fjr_dir = ", fjr_dir
           arg_fjrs=read_res_content(fjr_dir)
-          print "in get_arg arg_fjrs = ", arg_fjrs
+          #print "in get_arg arg_fjrs = ", arg_fjrs
       if o in ("-f", "--fjr"):
           print "file = a = ", a
           arg_fjrs.append(a)
@@ -173,8 +183,8 @@ def summary_block_publication(list, pubbl_exit, summary_file):
         print 'block publication failed'
   
 def check_fjr(path, fjr, doc_list, fjr_list):
-  print "in check_fjr"
-  print  "fjr_list = fjr_list"
+  #print "in check_fjr"
+  #print  "fjr_list = fjr_list"
 
   if path != '':
       doc = minidom.parse(path + '/' + fjr)
@@ -198,7 +208,7 @@ def check_fjr(path, fjr, doc_list, fjr_list):
                 exe_exit_status = str(entry.getAttribute("ExitStatus")).strip()
                 #print "exe_exit_status = ", exe_exit_status
             else: 
-                print "different exit_type in fjr", fjr    
+                print "other exit_type in fjr", fjr    
         else:        
             print "no tag FrameworkError found --> skip fjr ", fjr
       
@@ -216,7 +226,7 @@ def check_fjr(path, fjr, doc_list, fjr_list):
 def create_blockDump_commonpart(doc, blockDump):
 
   print "in create_blockDump_commonpart"
-  print "doc = ", doc
+  #print "doc = ", doc
   ### selected only the <File> part of fjr
   File = doc.getElementsByTagName("File")
   FileTag = File[0]
@@ -268,20 +278,28 @@ def create_blockDump_commonpart(doc, blockDump):
   primds_dictionary['primary_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]
   
   #print "##############################################################"
-  #print "primds_dictionary = ", primds_dictionary['primary_ds_name']
-  type = api_reader.listPrimaryDatasets(primary_ds_name=primds_dictionary['primary_ds_name'])
-  #print "type = ", type
-  #print "type[0]['create_by']= ", type[0]['create_by']
-  #print "type[0]['creation_date']= ", type[0]['creation_date']
-  #print "type[0]['primary_ds_type']= ", type[0]['primary_ds_type']
+  #print "in primds_dictionary, primds_ds_name = ", primds_dictionary['primary_ds_name']
+  type = dbs3api_global.listPrimaryDatasets(primary_ds_name=primds_dictionary['primary_ds_name'])
 
-  primds_dictionary['create_by']=type[0]['create_by']
-  primds_dictionary['primary_ds_type']=type[0]['primary_ds_type']
-  primds_dictionary['creation_date']=type[0]['creation_date']
-  #print "primds_dictionary = ", primds_dictionary
-  #print "##############################################################"
+  #print "type = ", type
+
+  if not type:
+      print "no info about the primds in the global dbs, using default parameters..."
+      primds_dictionary['create_by']=''
+      primds_dictionary['primary_ds_type']='mc'
+      primds_dictionary['creation_date']=''
+  else:    
+      #print "type[0]['create_by']= ", type[0]['create_by']
+      #print "type[0]['creation_date']= ", type[0]['creation_date']
+      #print "type[0]['primary_ds_type']= ", type[0]['primary_ds_type']
+      primds_dictionary['create_by']=type[0]['create_by']
+      primds_dictionary['primary_ds_type']=type[0]['primary_ds_type']
+      primds_dictionary['creation_date']=type[0]['creation_date']
+      #print "primds_dictionary = ", primds_dictionary
+      #print "##############################################################"
+
+  print primds_dictionary
   #exit()
-  #print primds_dictionary
 
   blockDump['primds']=primds_dictionary
   #print "blockDump['primds'] = ", blockDump['primds']
@@ -292,7 +310,7 @@ def create_blockDump_commonpart(doc, blockDump):
   dataset_dictionary['data_tier_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["data_tier_name"]]
 
   dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]] + '-v' + processing_era_dictionary['processing_version']
-  #print "dataset_dictionary['processed_ds_name'] = ",  dataset_dictionary['processed_ds_name']
+
   dataset_dictionary['dataset']='/'+FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]+'/'+dataset_dictionary['processed_ds_name']+'/'+dataset_dictionary['data_tier_name']
   #print dataset_dictionary
 
@@ -309,7 +327,6 @@ def create_blockDump_commonpart(doc, blockDump):
   #print "blockDump['acquisition_era'] = ", blockDump['acquisition_era']
   return blockDump 
 
-##############################################################################
 def create_file_parent_list(doc, list):
 ### this has to be made foreach file to be published
 ### taking info from tags <File><Inputs>
@@ -334,7 +351,6 @@ def create_file_parent_list(doc, list):
   #print file_parent_list        
   return list        
 
-######
 
 def create_files_dictionary(doc):
 ### this has to be made foreach file to be published
@@ -411,7 +427,7 @@ def create_file_conf_list_dictionary(list,lfn):
 
     file_conf_list_dictionary['lfn']=lfn
     #print "file_conf_list_dictionary = ", file_conf_list_dictionary
-    print ""
+    #print ""
  
     return file_conf_list_dictionary
 
@@ -432,6 +448,86 @@ def create_block_dictionary(doc):
     block_dictionary['origin_site_name']=SEName_value
     return block_dictionary
     
+def check_and_migrate_block_parents(list):
+    ### the argument list is the blockDump['file_parent_list'], i.e:
+    ### blockDump['file_parent_list']=[{'parent_logical_file_name': '/store/user/fiori/D0_To_hh_v1/D0_To_hh_v1/413df7d897fc38d13a2bf8a964566587/D0_To_hh_1721_1_OD8.root', 'logical_file_name': '/store/user/fanzago/D0_To_hh_v1/testFedeDel/f30a6bb13f516198b2814e83414acca1/outfile_3_1_Rth.root'}]
+     
+    print "--------------------"
+    print "in check_and_migrate, list = ", list
+    print "--------------------"
+    list_parent_lfn = []
+    list_parent_block_name=[]
+
+    ### JUST FOR TEST ###
+    ###query in the global https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader/files?dataset=/jdetd/enszw-koimc-v4/RECO
+    ### to have the lfn
+    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/uvdqm.root')
+    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/szarq.root')
+    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/cefla.root')
+    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/tfaaw.root')
+    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/sebuv.root')
+
+    print "--> list_parent_lfn = ", list_parent_lfn
+    ######################
+    ### to use the real code, uncomment the following lines
+    #for entry in list:
+    #    parent_lfn = entry['parent_logical_file_name']
+    #    print "parent_lfn = ", parent_lfn
+    #    list_parent_lfn.append(parent_lfn)
+    #######################
+
+    ### from parent_lfn we obtain the list fo related blocks ###
+    for parent_lfn in list_parent_lfn:
+        print "parent_lfn = ", parent_lfn
+    
+        ### reading from global dbs ###
+        parent_blocks=dbs3api_global.listBlocks(logical_file_name=parent_lfn)
+        print "parent_blocks = ", parent_blocks
+
+        if len(parent_blocks)!=0:
+            for entry in parent_blocks:
+                parent_block_name = entry['block_name']
+                ### list with unique block name ########
+                if parent_block_name not in list_parent_block_name:
+                    list_parent_block_name.append(parent_block_name)
+    
+    print "list_parent_block_name = ", list_parent_block_name
+    
+    ### check if blocks are already in the localDBS ###
+    if len(list_parent_block_name)!=0:
+        for entry in list_parent_block_name:
+            print "--> parent_block_name = ", entry
+            ### reading in the local dbs if the parent block already exists ###
+            #dbs3api_local.listBlocks(block_name=entry)
+            result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
+            #result = dbs3api_local.listBlocks(block_name='/jdetd/enszw-koimc-v4/RECO#35kg84l9-xbnm-ht5a-dj3q-nr6907ssq7i2')
+            #result = dbs3api_local.listBlocks(block_name=entry)
+            #print "result = ", result 
+            print "Is the parent_block in dbs local? ",result_listBlock
+            if not result_listBlock:
+                print "the block has to be migrated"
+                print "Trying the migration"
+                #result_migration=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
+                #print "result_migration=",result_migration
+                #result_migration_request=bool(dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry}))
+                result_migration_request=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
+                print "result_migration_request = ", result_migration_request
+                #if not result_migration_request:
+                #    print "the request of block has not been correctly migrated"
+                #else:
+                time.sleep(10)
+                result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
+                print "Is now the parent_block in dbs local? ",result_listBlock
+                if not result_listBlock:
+                    print "problems migrating the block"
+                else:
+                    print "migration ok, parent block are now in the localDBS "
+            else:
+                print "parent block already in the localDBS"
+    else:
+        print "no parent blocks in global dbs associated to the parent_lfn"
+        print "check the status of parents dataset is global dbs url ", url_global_reader
+        exit()
 
 ##### main #####
 if __name__ == "__main__":
@@ -500,6 +596,7 @@ if __name__ == "__main__":
 
     print "##################################################"
     print "blockDump = ", blockDump
+    print "--------------------------------------------------"
     print "blockDump['file_parent_list'] = ", blockDump['file_parent_list']
     #print "blockDump['file_conf_list'] = ", blockDump['file_conf_list']
     #print "blockDump['dataset_conf_list']= ", blockDump['dataset_conf_list']
@@ -510,6 +607,8 @@ if __name__ == "__main__":
     ######## to implement the migration of parent dataset #########################
     #### migration of parent files before inserting of block?
     #### we have the info about parent files in the blockDump['file_parent_list']
+    check_and_migrate_block_parents(blockDump['file_parent_list'])
+    
     ###############################################################################
     ###############################################################################
 
@@ -517,7 +616,8 @@ if __name__ == "__main__":
     ### to add the try-except ###
     ###try:
     ### uncomment the following line to publish the block
-    #api.insertBulkBlock(blockDump)
+    #print "publication step"
+    #dbs3api_local.insertBulkBlock(blockDump)
     ###pub_exit = 'True' 
     ###except:
     ###pub_exit = 'False' 
