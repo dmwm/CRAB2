@@ -461,19 +461,19 @@ def check_and_migrate_block_parents(list):
     ### JUST FOR TEST ###
     ###query in the global https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader/files?dataset=/jdetd/enszw-koimc-v4/RECO
     ### to have the lfn
-    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/uvdqm.root')
-    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/szarq.root')
-    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/cefla.root')
-    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/tfaaw.root')
-    list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/sebuv.root')
-
-    print "--> list_parent_lfn = ", list_parent_lfn
+    #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/uvdqm.root')
+    #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/szarq.root')
+    #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/cefla.root')
+    #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/tfaaw.root')
+    #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/sebuv.root')
+    #print "--> list_parent_lfn = ", list_parent_lfn
     ######################
+
     ### to use the real code, uncomment the following lines
-    #for entry in list:
-    #    parent_lfn = entry['parent_logical_file_name']
-    #    print "parent_lfn = ", parent_lfn
-    #    list_parent_lfn.append(parent_lfn)
+    for entry in list:
+        parent_lfn = entry['parent_logical_file_name']
+        print "parent_lfn = ", parent_lfn
+        list_parent_lfn.append(parent_lfn)
     #######################
 
     ### from parent_lfn we obtain the list fo related blocks ###
@@ -524,6 +524,32 @@ def check_and_migrate_block_parents(list):
                     print "migration ok, parent block are now in the localDBS "
             else:
                 print "parent block already in the localDBS"
+
+        #### update primaryDsinfo if necessary:
+        print "##############################################################################################"
+        print "FEDE UPDATE AFTER BLOCK MIGRATION"
+        print "blockDump['primds'] = ", blockDump['primds']
+        print  "blockDump['primds']['primary_ds_type'] = ", blockDump['primds']['primary_ds_type']
+
+        if blockDump['primds']['primary_ds_type'] == 'mc':
+            ##### JUST FOR TEST ##############################################################
+            #type={}
+            #type[0]={'primary_ds_type':'NEW_TYPE','create_by':'FEDE','creation_date':'NOW'}
+            #print "type = ", type
+            ##################################################################################
+
+            type = dbs3api_global.listPrimaryDatasets(primary_ds_name=blockDump['primds']['primary_ds_name'])
+            if not type or type[0]['primary_ds_type'] == 'mc':
+                print "something was wrong during the migration of block"
+                print "info about primary_ds not updated "
+            else:
+                blockDump['primds']['create_by']=type[0]['create_by']
+                blockDump['primds']['primary_ds_type']=type[0]['primary_ds_type']
+                blockDump['primds']['creation_date']=type[0]['creation_date']
+
+        print "after migration the blockDump['primds'] = ", blockDump['primds']
+        print "##############################################################################################"
+        #######################################
     else:
         print "no parent blocks in global dbs associated to the parent_lfn"
         print "check the status of parents dataset is global dbs url ", url_global_reader
@@ -608,6 +634,9 @@ if __name__ == "__main__":
     #### migration of parent files before inserting of block?
     #### we have the info about parent files in the blockDump['file_parent_list']
     check_and_migrate_block_parents(blockDump['file_parent_list'])
+    
+    print "####### after check_and_migrate #######"
+    print "blockDump = ", blockDump
     
     ###############################################################################
     ###############################################################################
