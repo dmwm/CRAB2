@@ -6,29 +6,30 @@ import time
 from dbs.apis.dbsClient import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
 
+#https://cmsweb-testbed.cern.ch/dbs/int/phys03/
+#https://cmsweb-testbed.cern.ch/dbs/prod/global/
+#https://cmsweb-testbed.cern.ch/dbs/int/global/
+#https://cmsweb-testbed.cern.ch/dbs/dev/global/
+
+### the official to use as localDBS
+url_local='https://cmsweb-testbed.cern.ch/dbs/int/global/'
+
 ### local DBS3 where to publish the user dataset
-#url_local_writer='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
-url_local_writer='https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter'
+url_local_writer=url_local + 'DBSWriter'
 dbs3api_local = DbsApi(url=url_local_writer)
-#### it was 
-#url='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSWriter'
-#api = DbsApi(url=url, proxy=proxy)
-#########################################
 
 ### global DBS3 from where read info about parents
-url_global_reader='https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
+url_global_reader='https://cmsweb.cern.ch/dbs/prod/global/DBSReader'
 dbs3api_global= DbsApi(url=url_global_reader)
-#dbs3api_global= DbsApi(url=url_local_writer)
-### it was
-#url_reader='https://cmsweb-testbed.cern.ch/dbs/prod/global/DBSReader'
-#api_reader=DbsApi(url=url_reader, proxy=proxy)
+### JUST FOR THE TEST ####
+#url_global_reader='https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
 ###########################################
 
 ### migration from global to local
-#url_migrate='https://cmsweb-testbed.cern.ch/dbs/prod/phys03/DBSMigrate'
-url_migrate='https://cmsweb.cern.ch/dbs/prod/phys03/DBSMigrate'
+url_migrate=url_local + 'DBSMigrate'
 dbs3api_migrate=DbsApi(url=url_migrate)
 ##########################################
+
 
 ### general dictionary with info about all the fjrs to publish ###
 blockDump={}
@@ -79,7 +80,6 @@ translation_DatasetInfo={"release_version":"ApplicationVersion", "pset_hash":"PS
 #translation_FileRuns={"lumi_section_num":"LumiSection","run_num":"Run"}
 #print translation_FileRuns
 ###########
-
 
 def read_res_content(path):
 
@@ -478,52 +478,74 @@ def check_and_migrate_block_parents(list):
 
     ### from parent_lfn we obtain the list fo related blocks ###
     for parent_lfn in list_parent_lfn:
-        print "parent_lfn = ", parent_lfn
-    
-        ### reading from global dbs ###
-        parent_blocks=dbs3api_global.listBlocks(logical_file_name=parent_lfn)
+        #print "parent_lfn = ", parent_lfn
+        ### reading from local dbs ###
+        print "looking in the localDBS for parent_blocks associated with the parent_lfn ", parent_lfn
+        parent_blocks=dbs3api_local.listBlocks(logical_file_name=parent_lfn)
+        if not parent_blocks:
+            print "no parent_blocks associated to the parent_lfn in the localDBS"
+            print "finding blocks in the global one:"
+            ### reading from global dbs ###
+            ##################################################################################
+            ### This is a block to migrate .... please change the code of migration.... ###
+            #parent_blocks_to_migrate=dbs3api_global.listBlocks(logical_file_name=parent_lfn)
+            #if not parent_blocks_to_migrate:
+            parent_blocks_to_migrate=dbs3api_global.listBlocks(logical_file_name=parent_lfn)
+            print "parent_blocks associated with the parent_lfn already in the localDBS", parent_blocks
+            if not parent_blocks_to_migrate:
+                print "no parent_block associated to the parent_lfn in the globalDBS"
+                print "may be there are problems with the parents of your dataset:"
+                #exit() 
+            else:
+                if len(parent_blocks_to_migrate)!=0:
+                    for entry in parent_blocks_to_migrate:
+                        parent_block_name = entry['block_name']
+                        print "the parent_blocks to migrate is ", parent_block_name
+                        ### list with unique block name ########
+                        if parent_block_name not in list_parent_block_name:
+                            list_parent_block_name.append(parent_block_name)
+            ################################################################################# 
+        else:
+            print "parent_blocks associated with the parent_lfn already in the localDBS", parent_blocks
+
         print "parent_blocks = ", parent_blocks
 
-        if len(parent_blocks)!=0:
-            for entry in parent_blocks:
-                parent_block_name = entry['block_name']
-                ### list with unique block name ########
-                if parent_block_name not in list_parent_block_name:
-                    list_parent_block_name.append(parent_block_name)
+        #if len(parent_blocks)!=0:
+        #    for entry in parent_blocks:
+        #        parent_block_name = entry['block_name']
+        #        ### list with unique block name ########
+        #        if parent_block_name not in list_parent_block_name:
+        #            list_parent_block_name.append(parent_block_name)
     
-    print "list_parent_block_name = ", list_parent_block_name
+    print "list_parent_block_name to migrate from globalDBS to local one = ", list_parent_block_name
     
-    ### check if blocks are already in the localDBS ###
+    ### FEDE OLD COMMENT check if blocks are already in the localDBS ###
+    ### migration of missing parent blocks from global to local ###
     if len(list_parent_block_name)!=0:
         for entry in list_parent_block_name:
-            print "--> parent_block_name = ", entry
+            print "starting parent blocks migration:"
+            ### FEDE OLD LINES ###################################################
+            #print "--> parent_block_name = ", entry
             ### reading in the local dbs if the parent block already exists ###
-            #dbs3api_local.listBlocks(block_name=entry)
+            #result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
+            #print "Is the parent_block in dbs local? ",result_listBlock
+            #if not result_listBlock:
+            #    print "the block has to be migrated"
+            #    print "Trying the migration"
+            #####################################################################
+            result_migration_request=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
+            print "result_migration_request = ", result_migration_request
+            time.sleep(10)
             result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
-            #result = dbs3api_local.listBlocks(block_name='/jdetd/enszw-koimc-v4/RECO#35kg84l9-xbnm-ht5a-dj3q-nr6907ssq7i2')
-            #result = dbs3api_local.listBlocks(block_name=entry)
-            #print "result = ", result 
-            print "Is the parent_block in dbs local? ",result_listBlock
+            print "Is now the parent_block in dbs local? ",result_listBlock
             if not result_listBlock:
-                print "the block has to be migrated"
-                print "Trying the migration"
-                #result_migration=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
-                #print "result_migration=",result_migration
-                #result_migration_request=bool(dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry}))
-                result_migration_request=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
-                print "result_migration_request = ", result_migration_request
-                #if not result_migration_request:
-                #    print "the request of block has not been correctly migrated"
-                #else:
-                time.sleep(10)
-                result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
-                print "Is now the parent_block in dbs local? ",result_listBlock
-                if not result_listBlock:
-                    print "problems migrating the block"
-                else:
-                    print "migration ok, parent block are now in the localDBS "
+                print "problems migrating the block"
             else:
-                print "parent block already in the localDBS"
+                print "migration ok, parent block now in the localDBS ", entry
+            #####################################################################
+            #else:
+            #    print "parent block already in the localDBS"
+            #####################################################################
 
         #### update primaryDsinfo if necessary:
         print "##############################################################################################"
@@ -551,9 +573,9 @@ def check_and_migrate_block_parents(list):
         print "##############################################################################################"
         #######################################
     else:
-        print "no parent blocks in global dbs associated to the parent_lfn"
-        print "check the status of parents dataset is global dbs url ", url_global_reader
-        exit()
+        print "no parent blocks to migrate from global dbs to local one"
+        #print "check the status of parents dataset is global dbs url ", url_global_reader
+        #exit()
 
 ##### main #####
 if __name__ == "__main__":
@@ -622,7 +644,6 @@ if __name__ == "__main__":
 
     print "##################################################"
     print "blockDump = ", blockDump
-    print "--------------------------------------------------"
     print "blockDump['file_parent_list'] = ", blockDump['file_parent_list']
     #print "blockDump['file_conf_list'] = ", blockDump['file_conf_list']
     #print "blockDump['dataset_conf_list']= ", blockDump['dataset_conf_list']
@@ -645,8 +666,9 @@ if __name__ == "__main__":
     ### to add the try-except ###
     ###try:
     ### uncomment the following line to publish the block
-    #print "publication step"
-    #dbs3api_local.insertBulkBlock(blockDump)
+    print "starting the publication of user dataset"
+    dbs3api_local.insertBulkBlock(blockDump)
+    print "############### end ################"
     ###pub_exit = 'True' 
     ###except:
     ###pub_exit = 'False' 
