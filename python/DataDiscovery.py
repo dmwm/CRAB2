@@ -370,7 +370,6 @@ class DataDiscovery:
         if len(self.eventsPerBlock) <= 0:
             msg="No data for %s in DBS\n Check datasetpath parameter in crab.cfg" % self.datasetPath
             raise  CrabException(msg)
-            #raise NotExistingDatasetError(msg)
 
 
     def queryDbs(self,api,path=None,runselection=None,useParent=None):
