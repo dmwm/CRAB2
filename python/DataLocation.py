@@ -64,15 +64,19 @@ class DataLocation:
         else:
             # assume it is some local scope DBS
             dbs_endpoint = urlparse.urlsplit(dbs_url)
-            if dbs_endpoint.hostname == DBS3HOST:
-                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
-            elif dbs_endpoint.hostname == DBS2HOST:
+            if 'cmsdbsprod' in dbs_endpoint.hostname :
                 DLS_type="DLS_TYPE_DBS"
                 dls=DLSInfo(DLS_type,self.cfg_params)
                 blockSites = self.PrepareDict(dls)
+            elif 'cmsweb' in dbs_endpoint.hostname :
+                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
             else:
-                msg = "UNKNOWN DBS END POINT: %s\n" % dbs_url
-                raise DataLocationError(msg)
+                # assume it is some test DBS3 end point
+                try:
+                    blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
+                except:
+                    msg = "CAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
+                    raise CrabException(msg)
 
         self.SelectedSites = blockSites
 
@@ -116,11 +120,11 @@ class DataLocation:
                 blockSites[fileblocks] = ''
                 failCount = failCount + 1
             except:
-                raise DataLocationError('')
+                raise CrabException('')
 
         if countblock == failCount:
             msg = "All data blocks encountered a DLS error.  Quitting."
-            raise DataLocationError(msg)
+            raise CrabException(msg)
         return blockSites
 # #######################################################################
     def getSites(self):
