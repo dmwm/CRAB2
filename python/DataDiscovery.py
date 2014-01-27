@@ -124,49 +124,61 @@ class DataDiscovery:
         useDAS = False
 
         # knwon DBS end-points
-        
+        known_dbs_urls = []
         global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
         global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+        caf_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_caf_analysis_01/servlet/DBSServlet"
         local_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet"
         local_dbs2_02 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_02/servlet/DBSServlet"
+        caf_dbs3_01   = "https://cmsweb.cern.ch/dbs/prod/caf01/DBSReader"
         local_dbs3_01 = "https://cmsweb.cern.ch/dbs/prod/phys01/DBSReader"
         local_dbs3_02 = "https://cmsweb.cern.ch/dbs/prod/phys02/DBSReader"
         local_dbs3_03 = "https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader"
+        known_dbs_urls = [ \
+            global_dbs2, caf_dbs2_01, local_dbs2_01, local_dbs2_02, \
+            global_dbs3, caf_dbs3_01, local_dbs3_01, local_dbs2_01, local_dbs3_03 \
+            ]
 
-
-        ## get DBS URL specified by user (default to global DBS2)
-        dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
-        
         ## correspondence maps of DBS2/3 isntances
         dbs2to3={}
         dbs3to2={}
         dbs2to3[global_dbs2] = global_dbs3
+        dbs2to3[caf_dbs2_01]   = caf_dbs3_01
         dbs2to3[local_dbs2_01] = local_dbs3_01
         dbs2to3[local_dbs2_02] = local_dbs3_02
         dbs2to3[local_dbs3_01] = local_dbs3_01
         dbs2to3[local_dbs3_02] = local_dbs3_02
         dbs2to3[local_dbs3_03] = local_dbs3_03
-        dbs3to2[global_dbs3] = global_dbs2
-        dbs3to2[local_dbs3_01] = local_dbs2_01
-        dbs3to2[local_dbs3_02] = local_dbs2_02
-        dbs3to2[local_dbs2_01] = local_dbs2_01
-        dbs3to2[local_dbs2_02] = local_dbs2_02
+        # reverse map:
+        for key,value in dbs2to3.iteritems():
+            dbs3to2[value]=key
 
+
+
+        ## get DBS URL specified by user (default to global DBS2)
+        dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+        
         if self.cfg_params.get('CMSSW.use_dbs3'):
             useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
 
         if self.cfg_params.get('CMSSW.verify_dbs23'):
             verifyDBS23 = int(self.cfg_params.get('CMSSW.verify_dbs23'))==1
+        if verifyDBS23 and not dbs_url in knwon_dbs_urls:
+            common.logger.info ("automatic verification DBS2/3 not possible for non standard dbs_url=%s"%dbs_url)
+            verifyDBS23 = False
 
         # support shortcuts for local scope DBS's
-        if "analysis_01" in dbs_url:  dbs_url=local_dbs2_01
-        if "analysis_02" in dbs_url:  dbs_url=local_dbs2_02
-        if "phys01" in dbs_url:       dbs_url=local_dbs3_01
-        if "phys02" in dbs_url:       dbs_url=local_dbs3_02
-        if "phys03" in dbs_url:       dbs_url=local_dbs3_03
+        if dbs_url == "dbs2_caf_01" :  dbs_url=caf_dbs2_01
+        if dbs_url == "analysis_01" :  dbs_url=local_dbs2_01
+        if dbs_url == "analysis_02" :  dbs_url=local_dbs2_02
+        if dbs_url == "caf01"  :       dbs_url=caf_dbs3_01
+        if dbs_url == "phys01" :       dbs_url=local_dbs3_01
+        if dbs_url == "phys02" :       dbs_url=local_dbs3_02
+        if dbs_url == "phys03" :       dbs_url=local_dbs3_03
 
         # if user asked for DBS3, remap DBS url if needed
-        if useDBS3:
+        # and possible, i.e. using a known URL
+        if useDBS3 and dbs_url in knwon_dbs_urls:
             dbs_url = dbs2to3 [dbs_url]
         common.logger.info("Accessing DBS at: "+dbs_url)
 
@@ -176,11 +188,18 @@ class DataDiscovery:
         if endpoint_components.hostname == DBS3HOST or useDBS3:
             useDBS3=True
             dbs_url_3 = dbs_url
-            dbs_url_2 = dbs3to2[dbs_url]
+            if dbs_url in known_dbs_urls:
+                dbs_url_2 = dbs3to2[dbs_url]
         elif endpoint_components.hostname == DBS2HOST:
             useDBS2=True
             dbs_url_2 = dbs_url
-            dbs_url_3 = dbs2to3[dbs_url]
+            if dbs_url in known_dbs_urls:
+                dbs_url_3 = dbs2to3[dbs_url]
+        else:
+            # if we do not know this URL, better be a DBS3 test instance
+            useDBS3=True
+            dbs_url_3 = dbs_url
+
         
         if useDBS2 and useDBS3:
             msg = "trying to use DBS2 and DBS3 at same time ?"
@@ -232,9 +251,10 @@ class DataDiscovery:
             raise CrabException(msg)
 
         ## service API
-        args = {}
-        args['url']     = dbs_url_2
-        args['level']   = 'CRITICAL'
+        if useDBS2 or verifyDBS23:
+            args = {}
+            args['url']     = dbs_url_2
+            args['level']   = 'CRITICAL'
 
         ## check if has been requested to use the parent info
         useparent = int(self.cfg_params.get('CMSSW.use_parent',0))
@@ -347,11 +367,10 @@ class DataDiscovery:
             msg = "No new fileblocks available for dataset: "+str(self.datasetPath)
             raise  CrabException(msg)
 
-
         if len(self.eventsPerBlock) <= 0:
-            raise NotExistingDatasetError(("\nNo data for %s in DBS\nPlease check"
-                                            + " dataset path variables in crab.cfg")
-                                            % self.datasetPath)
+            msg="No data for %s in DBS\n Check datasetpath parameter in crab.cfg" % self.datasetPath
+            raise  CrabException(msg)
+            #raise NotExistingDatasetError(msg)
 
 
     def queryDbs(self,api,path=None,runselection=None,useParent=None):
