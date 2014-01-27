@@ -83,7 +83,6 @@ class NoDataTierinProvenanceError(exceptions.Exception):
         return "%s" % (self.args)
 
 
-
 class DataDiscovery:
     """
     Class to find and extact info from published data
