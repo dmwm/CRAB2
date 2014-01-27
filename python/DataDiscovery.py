@@ -410,11 +410,10 @@ class DataDiscovery:
                     files = api.listDatasetFiles(self.datasetPath)
 
         except DbsBadRequest, msg:
-            raise DataDiscoveryError(msg)
+            raise crabException(msg)
         except DBSError, msg:
-            raise DataDiscoveryError(msg)
+            raise crabException(msg)
 
-        #common.logger.info("DBS2 IS RETURNING FILES OF LENGTH %s" % len(files))
         
         return files
 
