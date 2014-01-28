@@ -162,7 +162,7 @@ class DataDiscovery:
 
         if self.cfg_params.get('CMSSW.verify_dbs23'):
             verifyDBS23 = int(self.cfg_params.get('CMSSW.verify_dbs23'))==1
-        if verifyDBS23 and not dbs_url in knwon_dbs_urls:
+        if verifyDBS23 and not dbs_url in known_dbs_urls:
             common.logger.info ("automatic verification DBS2/3 not possible for non standard dbs_url=%s"%dbs_url)
             verifyDBS23 = False
 
@@ -177,7 +177,7 @@ class DataDiscovery:
 
         # if user asked for DBS3, remap DBS url if needed
         # and possible, i.e. using a known URL
-        if useDBS3 and dbs_url in knwon_dbs_urls:
+        if useDBS3 and dbs_url in known_dbs_urls:
             dbs_url = dbs2to3 [dbs_url]
         common.logger.info("Accessing DBS at: "+dbs_url)
 
