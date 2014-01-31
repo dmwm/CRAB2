@@ -251,7 +251,7 @@ class GetOutput(Actor):
                     lfns.append(f['LFN'])
                 if f['PFN']:
                     #### FEDE to have the correct endpoit to use in the copyData (we modify the bossDB value and not the fjr ) 
-                    if common.scheduler.name().upper() not in ['LSF', 'CAF', 'PBS'] and codeValue["wrapperReturnCode"] == 60308:
+                    if common.scheduler.name().upper() not in ['LSF', 'CAF', 'PBS', 'PBSV2'] and codeValue["wrapperReturnCode"] == 60308:
                         pfns.append(os.path.dirname(f['SurlForGrid'])+'/')
                     else:
                         pfns.append(os.path.dirname(f['PFN'])+'/')
@@ -262,7 +262,7 @@ class GetOutput(Actor):
                     lfns.append(aFile['LFN'])
                 if aFile['PFN']:
                     #### FEDE to have the correct endpoit to use in the copyData (we modify the bossDB value and not the fjr ) 
-                    if common.scheduler.name().upper() not in ['LSF', 'CAF', 'PBS'] and codeValue["wrapperReturnCode"] == 60308:
+                    if common.scheduler.name().upper() not in ['LSF', 'CAF', 'PBS', 'PBSV2'] and codeValue["wrapperReturnCode"] == 60308:
                         pfns.append(os.path.dirname(aFile['SurlForGrid'])+'/')
                     else:    
                         pfns.append(os.path.dirname(aFile['PFN'])+'/')

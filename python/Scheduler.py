@@ -44,7 +44,8 @@ class Scheduler :
                               'CONDOR'   : 'srm-lcg',  \
                               'REMOTEGLIDEIN'  : 'srm-lcg',  \
                               'SGE'      : 'srm-lcg', \
-                              'ARC'      : 'srm-lcg'
+                              'ARC'      : 'srm-lcg', \
+                              'PBSV2'    : 'srm-lcg',
                             }
 
         self.protocolOpt = { 'rfio' : '', \
