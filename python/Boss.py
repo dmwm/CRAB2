@@ -48,7 +48,8 @@ class Boss:
                     'caf':      'SchedulerLsf',\
                     'sge':      'SchedulerSge',\
                     'arc':      'SchedulerARC',\
-                    'pbs':      'SchedulerPbs'
+                    'pbs':      'SchedulerPbs',\
+                    'pbsv2':    'SchedulerPbsv2',\
                     }
 
         self.schedulerConfig = common.scheduler.realSchedParams(cfg_params)

@@ -11,8 +11,10 @@ from RestClient.ErrorHandling.RestClientExceptions import HTTPError
 #https://cmsweb-testbed.cern.ch/dbs/int/global/
 #https://cmsweb-testbed.cern.ch/dbs/dev/global/
 
-### the official to use as localDBS
-url_local='https://cmsweb-testbed.cern.ch/dbs/int/global/'
+### THE LAST
+#url_local='https://cmsweb-testbed.cern.ch/dbs/int/global/'
+url_local='https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
+########################
 
 ### local DBS3 where to publish the user dataset
 url_local_writer=url_local + 'DBSWriter'
@@ -30,6 +32,12 @@ url_migrate=url_local + 'DBSMigrate'
 dbs3api_migrate=DbsApi(url=url_migrate)
 ##########################################
 
+print "##################################################"
+print "### DBS istances:"
+print "url_local_writer = ", url_local_writer
+print "url_global_reader = ", url_global_reader
+print "url_migrate = ", url_migrate
+print "##################################################"
 
 ### general dictionary with info about all the fjrs to publish ###
 blockDump={}
@@ -81,6 +89,10 @@ translation_DatasetInfo={"release_version":"ApplicationVersion", "pset_hash":"PS
 #print translation_FileRuns
 ###########
 
+summary_already_published_file_name = 'fjr_already_published.txt'
+summary_failed_file_name = 'fjr_failed_publication.txt'
+
+
 def read_res_content(path):
 
   fjr_dir=path
@@ -103,8 +115,9 @@ def read_res_content(path):
   #already_published_txt.close()    
   ##################### 
   
+  ### check if there is in the dir the summary file about previus publication steps ###
   list_A=[]
-  summary_already_published_file=fjr_dir + '/fjr_already_published.txt'
+  summary_already_published_file=fjr_dir + summary_already_published_file_name
   if os.path.exists(summary_already_published_file):
       read_already_published_txt=open(summary_already_published_file, "r")
       list_A=read_already_published_txt.readlines()
@@ -117,13 +130,14 @@ def read_res_content(path):
           #print "entry = ", entry 
       #print "list_A = ", list_A
 
+  ### create the list with the fjr files to publish
   new_fjrs=[]
   for fjr in list_fjr_in_dir:
       if fjr not in list_A:
           new_fjrs.append(fjr)
-  #print "new_fjrs = ", new_fjrs        
+
+  ### return the list with fjr files to publish
   return new_fjrs
-  # exit()    
 
 def get_arg():
   ######
@@ -134,6 +148,8 @@ def get_arg():
   #############
   fjr_dir = ''
   arg_fjrs=[]
+  print "##################################################"
+  print "### arguments:"
   try:
       opts, args = getopt.getopt(sys.argv[1:], "hc:f:", ["help", "continue=", "fjr="])
       print "opts = " , opts
@@ -153,41 +169,58 @@ def get_arg():
           if str.find(a,"crab_")!= -1:
               fjr_dir = a + '/res/'
           else: fjr_dir = a    
-          print "fjr_dir = ", fjr_dir
+          #print "fjr_dir = ", fjr_dir
           arg_fjrs=read_res_content(fjr_dir)
           #print "in get_arg arg_fjrs = ", arg_fjrs
       if o in ("-f", "--fjr"):
-          print "file = a = ", a
-          arg_fjrs.append(a)
-          print "arg_fjrs = ", arg_fjrs
+          #print "complete file = a = ", a
+          fjr_dir = os.path.dirname(a)
+          filename = os.path.basename(a)
+          #print "fjr_dir = ", fjr_dir 
+          #print "filename = ", filename
+          arg_fjrs.append(filename)
+          #print "arg_fjrs = ", arg_fjrs
+
       if o in ("-h", "--help"):
           print "usage: python parser_dbs3.py "
           print "option to use:"
           print "  -c, --continue name of crab task ' looks inside the res dir to discover fjr files"
           print "  -f, --fjr specify the complete path of a fjr to publish"
           print "  -h, --help help of the script"
+          #print __doc__
 
+  print "##################################################"
   return arg_fjrs, fjr_dir        
   
-def summary_block_publication(list, pubbl_exit, summary_file):
-    print "summary_file = ", summary_file
-    if pubbl_exit == 'True':
-        if os.path.exists(summary_file):                  
-            published_txt=open(summary_file, "a")
-        else:
-            published_txt=open(summary_file, "w")
-        for file in fjr_list:
-            published_txt.write(file + "\n")        
-        published_txt.close()    
+def summary_block_publication(list, path, summary_file_name):
+    #print "list = ", list
+    #print "path = ", path
+    #print "FINE"
+    #exit()
+    if path != '' and path[-1] != '/':
+        path = path + '/'
+
+    print "path = ", path
+    if os.path.exists(path + summary_file_name):                  
+        published_txt=open(path + summary_file_name, "a")
     else:
-        print 'block publication failed'
+        published_txt=open(path + summary_file_name, "w")
+    for file in list:
+        published_txt.write(file + "\n")        
+    published_txt.close()    
+    print "##################################################"
+    print "### publication summary file: ", path + summary_file_name
+    print "##################################################"
   
 def check_fjr(path, fjr, doc_list, fjr_list):
   #print "in check_fjr"
   #print  "fjr_list = fjr_list"
 
   if path != '':
-      doc = minidom.parse(path + '/' + fjr)
+      if path[-1]!='/':
+          path = path + '/'
+      #doc = minidom.parse(path + '/' + fjr)
+      doc = minidom.parse(path + fjr)
   else:
       doc = minidom.parse(fjr)
 
@@ -213,19 +246,19 @@ def check_fjr(path, fjr, doc_list, fjr_list):
             print "no tag FrameworkError found --> skip fjr ", fjr
       
      if (wrapper_exit_status == "0" and exe_exit_status == "0"):
-            print "ok exit_codes ok"
+            #print "ok exit_codes ok"
             doc_list.append(doc)
             fjr_list.append(fjr)
-            print "doc_list = ", doc_list
-            print "fjr_list = ", fjr_list
-     else:
-         print "exit_codes not zero --> skip fjr ", fjr
+            #print "doc_list = ", doc_list
+            #print "fjr_list = ", fjr_list
+     #else:
+     #    print "exit_codes not zero --> skip fjr ", fjr
 
   return doc_list, fjr_list
 
 def create_blockDump_commonpart(doc, blockDump):
 
-  print "in create_blockDump_commonpart"
+  #print "in create_blockDump_commonpart"
   #print "doc = ", doc
   ### selected only the <File> part of fjr
   File = doc.getElementsByTagName("File")
@@ -263,7 +296,6 @@ def create_blockDump_commonpart(doc, blockDump):
 
   blockDump['dataset_conf_list'].append(dataset_conf_list_dictionary)
   #print "blockDump = ", blockDump
-  #return blockDump 
 
   ### creating processing_era_dictionary (this has to be created one time) 
   processing_era_dictionary={'create_by':'crab2', 'processing_version':'1', 'description':'crab2'}
@@ -271,16 +303,12 @@ def create_blockDump_commonpart(doc, blockDump):
 
   blockDump['processing_era']=processing_era_dictionary
   #print "blockDump = ", blockDump
-  #return blockDump 
 
   ### creating primds_dictionary (this has to be created one time)
   primds_dictionary={}
   primds_dictionary['primary_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]
-  
-  #print "##############################################################"
   #print "in primds_dictionary, primds_ds_name = ", primds_dictionary['primary_ds_name']
   type = dbs3api_global.listPrimaryDatasets(primary_ds_name=primds_dictionary['primary_ds_name'])
-
   #print "type = ", type
 
   if not type:
@@ -289,34 +317,26 @@ def create_blockDump_commonpart(doc, blockDump):
       primds_dictionary['primary_ds_type']='mc'
       primds_dictionary['creation_date']=''
   else:    
-      #print "type[0]['create_by']= ", type[0]['create_by']
-      #print "type[0]['creation_date']= ", type[0]['creation_date']
-      #print "type[0]['primary_ds_type']= ", type[0]['primary_ds_type']
       primds_dictionary['create_by']=type[0]['create_by']
       primds_dictionary['primary_ds_type']=type[0]['primary_ds_type']
       primds_dictionary['creation_date']=type[0]['creation_date']
-      #print "primds_dictionary = ", primds_dictionary
-      #print "##############################################################"
 
-  print primds_dictionary
-  #exit()
+  #print primds_dictionary
 
   blockDump['primds']=primds_dictionary
-  #print "blockDump['primds'] = ", blockDump['primds']
-  #return blockDump 
 
   ### creating dataset_dictionary (this has to be created one time) 
   dataset_dictionary={'physics_group_name':'', 'create_by':'', 'dataset_access_type':'VALID', 'last_modified_by':'', 'creation_date':'', 'xtcrosssection':'', 'last_modification_date':''}
   dataset_dictionary['data_tier_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["data_tier_name"]]
-
-  dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]] + '-v' + processing_era_dictionary['processing_version']
+  ##### removing the -v1
+  #dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]] + '-v' + processing_era_dictionary['processing_version']
+  dataset_dictionary['processed_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["processed_ds_name"]]
 
   dataset_dictionary['dataset']='/'+FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]+'/'+dataset_dictionary['processed_ds_name']+'/'+dataset_dictionary['data_tier_name']
   #print dataset_dictionary
 
   blockDump['dataset']=dataset_dictionary
   #print "blockDump['dataset'] = ", blockDump['dataset']
-  #return blockDump 
 
 
   ### creating acquisition_era_dictionary (this has to be created one time) 
@@ -330,7 +350,6 @@ def create_blockDump_commonpart(doc, blockDump):
 def create_file_parent_list(doc, list):
 ### this has to be made foreach file to be published
 ### taking info from tags <File><Inputs>
-
 
   File = doc.getElementsByTagName("File")
   FileTag = File[0]
@@ -427,7 +446,7 @@ def create_file_conf_list_dictionary(list,lfn):
 
     file_conf_list_dictionary['lfn']=lfn
     #print "file_conf_list_dictionary = ", file_conf_list_dictionary
-    #print ""
+    print ""
  
     return file_conf_list_dictionary
 
@@ -458,7 +477,7 @@ def check_and_migrate_block_parents(list):
     list_parent_lfn = []
     list_parent_block_name=[]
 
-    ### JUST FOR TEST ###
+    ############################### JUST FOR TEST ###########################################
     ###query in the global https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader/files?dataset=/jdetd/enszw-koimc-v4/RECO
     ### to have the lfn
     #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/uvdqm.root')
@@ -467,14 +486,31 @@ def check_and_migrate_block_parents(list):
     #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/tfaaw.root')
     #list_parent_lfn.append('/store/data/enszw/jdetd/RECO/4/000000000/sebuv.root')
     #print "--> list_parent_lfn = ", list_parent_lfn
-    ######################
 
-    ### to use the real code, uncomment the following lines
+    ##dataset = '/RelValJpsiMM/CMSSW_7_0_0_pre11-START70_V4_HLTGRun-v1/GEN-SIM-DIGI-RAW-HLTDEBUG'
+    #dataset = '/RelValSingleGammaPt35_UP15/CMSSW_7_0_0_pre12-POSTLS170_V1-v1/GEN-SIM-RECO'
+    #print "########### GLOBAL ###################"
+    #files_glo = dbs3api_global.listFiles(dataset=dataset)
+    #print "files global = ", files_glo
+    #print "########### LOCAL ###################"
+    #files_loc = dbs3api_local.listFiles(dataset= dataset)
+    #print "files loc = ", files_loc
+
+    #for entry in files_glo:
+    #    print "entry = ", entry
+    #    print entry['logical_file_name']
+    #    list_parent_lfn.append(entry['logical_file_name'])
+
+    #print "list_parent_lfn = ", list_parent_lfn
+    ##################################################################################
+    
+    #####################################################################
+    ######## to use the real code, uncomment the following lines ########
     for entry in list:
         parent_lfn = entry['parent_logical_file_name']
         print "parent_lfn = ", parent_lfn
         list_parent_lfn.append(parent_lfn)
-    #######################
+    #####################################################################
 
     ### from parent_lfn we obtain the list fo related blocks ###
     for parent_lfn in list_parent_lfn:
@@ -487,15 +523,11 @@ def check_and_migrate_block_parents(list):
             print "finding blocks in the global one:"
             ### reading from global dbs ###
             ##################################################################################
-            ### This is a block to migrate .... please change the code of migration.... ###
-            #parent_blocks_to_migrate=dbs3api_global.listBlocks(logical_file_name=parent_lfn)
-            #if not parent_blocks_to_migrate:
             parent_blocks_to_migrate=dbs3api_global.listBlocks(logical_file_name=parent_lfn)
-            print "parent_blocks associated with the parent_lfn already in the localDBS", parent_blocks
             if not parent_blocks_to_migrate:
                 print "no parent_block associated to the parent_lfn in the globalDBS"
                 print "may be there are problems with the parents of your dataset:"
-                #exit() 
+                exit() 
             else:
                 if len(parent_blocks_to_migrate)!=0:
                     for entry in parent_blocks_to_migrate:
@@ -508,50 +540,76 @@ def check_and_migrate_block_parents(list):
         else:
             print "parent_blocks associated with the parent_lfn already in the localDBS", parent_blocks
 
-        print "parent_blocks = ", parent_blocks
-
-        #if len(parent_blocks)!=0:
-        #    for entry in parent_blocks:
-        #        parent_block_name = entry['block_name']
-        #        ### list with unique block name ########
-        #        if parent_block_name not in list_parent_block_name:
-        #            list_parent_block_name.append(parent_block_name)
-    
     print "list_parent_block_name to migrate from globalDBS to local one = ", list_parent_block_name
     
-    ### FEDE OLD COMMENT check if blocks are already in the localDBS ###
-    ### migration of missing parent blocks from global to local ###
     if len(list_parent_block_name)!=0:
+        #### FOR CHECK MIGRATION STATUS ####
+        migrated_now = []
+        tot_already_migrated_status = 0
+        tot_now_migrated_status = 0
         for entry in list_parent_block_name:
-            print "starting parent blocks migration:"
-            ### FEDE OLD LINES ###################################################
-            #print "--> parent_block_name = ", entry
-            ### reading in the local dbs if the parent block already exists ###
-            #result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
-            #print "Is the parent_block in dbs local? ",result_listBlock
-            #if not result_listBlock:
-            #    print "the block has to be migrated"
-            #    print "Trying the migration"
-            #####################################################################
-            result_migration_request=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
-            print "result_migration_request = ", result_migration_request
-            time.sleep(10)
-            result_listBlock=bool(dbs3api_local.listBlocks(block_name=entry))
-            print "Is now the parent_block in dbs local? ",result_listBlock
-            if not result_listBlock:
-                print "problems migrating the block"
+            ##### checking if the migrations is already required: #####
+            migration_status=dbs3api_migrate.statusMigration(block_name=entry)
+            #print "migration_status = ", migration_status
+            #print "bool(migration_status) = ", bool(migration_status)
+            if (bool(migration_status) == False):
+                ##### if not, migration request is submitted #####
+                print "requiring migration"
+                result_migration_request=dbs3api_migrate.submitMigration({'migration_url':url_global_reader, 'migration_input':entry})
+                print "result_migration_request = ", result_migration_request
+                migrated_now.append(entry)
             else:
-                print "migration ok, parent block now in the localDBS ", entry
-            #####################################################################
-            #else:
-            #    print "parent block already in the localDBS"
-            #####################################################################
+                ##### check the status of previus request 
+                if migration_status[0]['migration_status'] == 3:
+                    print "status 3 migration failed, please contactdbs managers"
+                    tot_already_migrated_status = tot_already_migrated_status + 1 
+                    #exit()
+                elif migration_status[0]['migration_status'] == 1:
+                    print "status 1 migration in process, please wait around 15 minutes before retrying"
+                    tot_already_migrated_status = tot_already_migrated_status + 1
+                    #exit()
+                elif migration_status[0]['migration_status'] == 0:
+                    print "status 0 migration required, please wait around 15 minutes before retrying"
+                    tot_already_migrated_status = tot_already_migrated_status + 1
+                    #exit()
+                elif migration_status[0]['migration_status'] == 2:
+                    print "status 2 migration ok"
 
+        if len(migrated_now) == 0 and tot_already_migrated_status > 0:
+            print "migration from global to local dbs not completed"
+            exit()
+
+        if len(migrated_now) != 0:
+            time.sleep(10)
+            for entry in migrated_now:
+                migration_status_now=dbs3api_migrate.statusMigration(block_name=entry)
+                print "migration_status now = ", migration_status_now
+                #print "bool(migration_status now) = ", bool(migration_status_now)
+
+                if migration_status_now[0]['migration_status'] == 3:
+                    print "status 3 migration failed, please contactdbs managers"
+                    tot_now_migrated_status = tot_now_migrated_status + 1
+                    #exit()
+                elif migration_status_now[0]['migration_status'] == 1:
+                    print "status 1 migration in process, please wait around 15 minutes before retrying"
+                    tot_now_migrated_status = tot_now_migrated_status + 1
+                    #exit()
+                elif migration_status_now[0]['migration_status'] == 0:
+                    print "status 0 migration required, please wait around 15 minutes before retrying"
+                    tot_now_migrated_status = tot_now_migrated_status + 1
+                    #exit()
+                elif migration_status_now[0]['migration_status'] == 2:
+                    print "status 2 migration ok"
+
+        if len(migrated_now) == 0 and tot_now_migrated_status > 0:
+            print "migration from global to local dbs not completed"
+            exit()
+             
         #### update primaryDsinfo if necessary:
         print "##############################################################################################"
-        print "FEDE UPDATE AFTER BLOCK MIGRATION"
-        print "blockDump['primds'] = ", blockDump['primds']
-        print  "blockDump['primds']['primary_ds_type'] = ", blockDump['primds']['primary_ds_type']
+        #print "FEDE UPDATE AFTER BLOCK MIGRATION"
+        #print "blockDump['primds'] = ", blockDump['primds']
+        #print  "blockDump['primds']['primary_ds_type'] = ", blockDump['primds']['primary_ds_type']
 
         if blockDump['primds']['primary_ds_type'] == 'mc':
             ##### JUST FOR TEST ##############################################################
@@ -579,17 +637,13 @@ def check_and_migrate_block_parents(list):
 
 ##### main #####
 if __name__ == "__main__":
-   # print "sono nel main ..."
     arg_list, fjr_dir= get_arg()
     print "------"
     print arg_list
     print fjr_dir
     print "------"
     if len(arg_list)==0:
-      #print "len(arg_list) = ", len(arg_list)
-      #print "exit"
       exit()
-    #exit()
 
     # fjr is the name of fjr to publish
     for fjr in arg_list:
@@ -597,11 +651,14 @@ if __name__ == "__main__":
         doc_list, fjr_list = check_fjr(fjr_dir, fjr, doc_list, fjr_list)
 
     ### list of files ok for publication
-    print "doc_list = ", doc_list
+    print "##################################################"
+    print "### fjr ok, they can be published:"
+    #print "doc_list = ", doc_list
     print "fjr_list = ", fjr_list
 
     number_of_files=len(doc_list)
-    print "number of file to publish file_count = ", number_of_files
+    print "number of fjrs to publish file_count = ", number_of_files
+    print "##################################################"
     if len(doc_list)==0:
       print "exit"
       exit()
@@ -643,40 +700,28 @@ if __name__ == "__main__":
     blockDump['block']['block_name']=blockDump['dataset']['dataset'] + '#' +str(uuid.uuid4())
 
     print "##################################################"
+    print "### creating blockDump: "
+    print "##################################################"
     print "blockDump = ", blockDump
-    print "blockDump['file_parent_list'] = ", blockDump['file_parent_list']
+    #print "blockDump['file_parent_list'] = ", blockDump['file_parent_list']
     #print "blockDump['file_conf_list'] = ", blockDump['file_conf_list']
     #print "blockDump['dataset_conf_list']= ", blockDump['dataset_conf_list']
+    
     print "##################################################"
-    #print "##### inserting data in dbs #####################"
-
-    ###############################################################################
-    ######## to implement the migration of parent dataset #########################
-    #### migration of parent files before inserting of block?
-    #### we have the info about parent files in the blockDump['file_parent_list']
+    print "### checking parents: "
+    print "##################################################"
     check_and_migrate_block_parents(blockDump['file_parent_list'])
+    print "##################################################"
     
-    print "####### after check_and_migrate #######"
-    print "blockDump = ", blockDump
+    print "##################################################"
+    print "### starting the publication of user dataset: "
+    print "fjr_dir = ", fjr_dir
+    print "fjr_list = ", fjr_list
+    try:
+        dbs3api_local.insertBulkBlock(blockDump)
+        summary_block_publication(fjr_list, fjr_dir, summary_already_published_file_name) 
+    except HTTPError as http_error:
+        print "http_error = ", http_error
+        summary_block_publication(fjr_list, fjr_dir, summary_failed_file_name) 
     
-    ###############################################################################
-    ###############################################################################
-
-    ########################################
-    ### to add the try-except ###
-    ###try:
-    ### uncomment the following line to publish the block
-    print "starting the publication of user dataset"
-    dbs3api_local.insertBulkBlock(blockDump)
-    print "############### end ################"
-    ###pub_exit = 'True' 
-    ###except:
-    ###pub_exit = 'False' 
-    ########################################
-
-    ### just for test: 
-    #pub_exit='True' 
-    ###
-    
-    #
-    #summary_block_publication(fjr_list, pub_exit, fjr_dir + '/fjr_already_published.txt')
+    print "############################ end ################"

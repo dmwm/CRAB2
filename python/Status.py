@@ -297,7 +297,7 @@ class Status(Actor):
             WMS = str(jid.split('//')[0])
             jobId = str(id) + '_https://' + str(jid)
             msg += ('JobID for ML monitoring is created for remoteGlidein scheduler: %s\n'%jobId)
-        elif common.scheduler.name().upper() in ['LSF','CAF', 'PBS']:
+        elif common.scheduler.name().upper() in ['LSF','CAF', 'PBS','PBSV2']:
             WMS = common.scheduler.name()
             jobId=str(id)+"_https://"+common.scheduler.name().upper()+":/"+str(jid)+"-"+string.replace(task_unique_name,"_","-")
             msg += ('JobID for ML monitoring is created for Local scheduler: %s\n'%jobId)
