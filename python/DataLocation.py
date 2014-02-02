@@ -34,27 +34,19 @@ class DataLocation:
         Contact DLS
         """
 
+        # Force show_prod=1 for everybody, grid jobs rely on central black list and t1access role to limit access to T1's
+        self.cfg_params['CMSSW.show_prod'] = 1
+
         # make assumption that same host won't be used for both
         # this check should catch most deployed servers
         DBS2HOST = 'cmsdbsprod.cern.ch'
         DBS3HOST = 'cmsweb.cern.ch'
-        useDBS2 = False
-        useDBS3 = False
-        useDAS = False
+        (isDbs2, isDbs3, dbs2_url, dbs3_url) = verify_dbs_url(self)
+        if isDbs2: dbs_url=dbs2_url
+        if isDbs3: dbs_url=dbs3_url
 
         global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
         global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
-
-        if self.cfg_params.get('CMSSW.use_dbs3'):
-            useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
-        if useDBS3:
-            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
-        else:
-            dbs_url=  self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
-            
-
-        # Force show_prod=1 for everybody, grid jobs rely on central black list and t1access role to limit access to T1's
-        self.cfg_params['CMSSW.show_prod'] = 1
 
         if dbs_url==global_dbs2 or dbs_url==global_dbs3:
             # global DBS has no location info
@@ -63,13 +55,10 @@ class DataLocation:
             blockSites = dls.getReplicasBulk(self.Listfileblocks)
         else:
             # assume it is some local scope DBS
-            dbs_endpoint = urlparse.urlsplit(dbs_url)
-            if 'cmsdbsprod' in dbs_endpoint.hostname :
+            if isDbs2:
                 DLS_type="DLS_TYPE_DBS"
                 dls=DLSInfo(DLS_type,self.cfg_params)
                 blockSites = self.PrepareDict(dls)
-            elif 'cmsweb' in dbs_endpoint.hostname :
-                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
             else:
                 # assume it is some test DBS3 end point
                 try:

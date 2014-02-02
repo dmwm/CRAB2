@@ -836,6 +836,124 @@ class Color():
         except:
             # guess false in case of error
             return False
+
+def verify_dbs_url(self) :
+# parse dbs_url from crab.cfg, turn into a standard
+# one, decide if DBS2 or DBS3 and compute the corresponding
+# one in the other DBS if possible
+# also forcefully map to DBS3 is crab.cfg has use_dbs3=1
+# take no input argument and returns an ntuple
+# (isDbs2, isDbs3, dbs2_url, dbs3_url) first two are boolean, others strings
+#
+    DBS2HOST = 'cmsdbsprod.cern.ch'
+    DBS3HOST = 'cmsweb.cern.ch'
+# knwon DBS end-points
+    known_dbs2_urls = []
+    known_dbs3_urls = []
+    global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+    global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
+    caf_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_caf_analysis_01/servlet/DBSServlet"
+    local_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet"
+    local_dbs2_02 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_02/servlet/DBSServlet"
+    caf_dbs3_01   = "https://cmsweb.cern.ch/dbs/prod/caf01/DBSReader"
+    local_dbs3_01 = "https://cmsweb.cern.ch/dbs/prod/phys01/DBSReader"
+    local_dbs3_02 = "https://cmsweb.cern.ch/dbs/prod/phys02/DBSReader"
+    local_dbs3_03 = "https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader"
+    known_dbs2_urls = [ \
+        global_dbs2, caf_dbs2_01, local_dbs2_01, local_dbs2_02,
+        ]
+    known_dbs3_urls = [ \
+        global_dbs3, caf_dbs3_01, local_dbs3_01, local_dbs2_01, local_dbs3_03,
+        ]
+    known_dbs_urls = known_dbs2_urls + known_dbs3_urls
+
+    ## correspondence maps of DBS2/3 isntances
+    dbs2to3={}
+    dbs3to2={}
+    dbs2to3[global_dbs2] = global_dbs3
+    dbs2to3[global_dbs3] = global_dbs3
+    dbs2to3[caf_dbs2_01]   = caf_dbs3_01
+    dbs2to3[local_dbs2_01] = local_dbs3_01
+    dbs2to3[local_dbs2_02] = local_dbs3_02
+    dbs2to3[local_dbs3_01] = local_dbs3_01
+    dbs2to3[local_dbs3_02] = local_dbs3_02
+    dbs2to3[local_dbs3_03] = local_dbs3_03
+    # reverse map:
+    dbs3to2[global_dbs2] = global_dbs2
+    dbs3to2[global_dbs3] = global_dbs2
+    dbs3to2[caf_dbs3_01]   = caf_dbs2_01
+    dbs3to2[local_dbs3_01] = local_dbs2_01
+    dbs3to2[local_dbs3_02] = local_dbs2_02
+    dbs3to2[local_dbs3_03] = None
+    dbs3to2[local_dbs2_01] = local_dbs2_01
+    dbs3to2[local_dbs2_02] = local_dbs2_02
+
+    ## get DBS URL specified by user (default to global DBS2)
+    dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+
+    # support shortcuts for local scope DBS's
+    if dbs_url == "dbs2_caf_01" :  dbs_url=caf_dbs2_01
+    if dbs_url == "analysis_01" :  dbs_url=local_dbs2_01
+    if dbs_url == "analysis_02" :  dbs_url=local_dbs2_02
+    if dbs_url == "caf01"  :       dbs_url=caf_dbs3_01
+    if dbs_url == "phys01" :       dbs_url=local_dbs3_01
+    if dbs_url == "phys02" :       dbs_url=local_dbs3_02
+    if dbs_url == "phys03" :       dbs_url=local_dbs3_03
+
+    # someone uses Writer for reading, make sure we still identify known instances
+    if dbs_url == "https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_01_writer/servlet/DBSServlet" :
+        dbs_url = local_dbs2_01
+    if dbs_url == "https://cmsdbsprod.cern.ch:8443/cms_dbs_ph_analysis_02_writer/servlet/DBSServlet" :
+        dbs_url = local_dbs2_02
+    if dbs_url == "https://cmsweb.cern.ch/dbs/prod/phys01/DBSWriter" :
+        dbs_url = local_dbs3_01
+    if dbs_url == "https://cmsweb.cern.ch/dbs/prod/phys02/DBSWriter" :
+        dbs_url = local_dbs3_02
+    if dbs_url == "https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter" :
+        dbs_url = local_dbs3_03
+
+    # if user asked for DBS3, remap DBS url if needed and possible
+    useDBS3 = self.cfg_params.get('CMSSW.use_dbs3', None)=='1'
+    if useDBS3  and dbs_url in known_dbs2_urls:
+        dbs_url = dbs2to3 [dbs_url]
+    # make sure all crab functions use this new DBS url:
+    self.cfg_params['CMSSW.dbs_url'] = dbs_url
+
+# now that we have settled on the input dbs_url from user
+# check if it is DBS2 or 3 and find corresponding url in the other
+# for possible verification
+
+    if  DBS3HOST in dbs_url:
+        isDbs2=False
+        isDbs3=True
+        dbs3_url=dbs_url
+        if dbs3_url in known_dbs3_urls and not dbs_url == local_dbs3_03:
+            dbs2_url=dbs3to2[dbs3_url]
+        else:
+            msg="No mapping to a DBS2 instance possible for dbs_url=%s"%dbs_url
+            common.logger.debug(msg)
+            dbs2_url=None
+    elif DBS2HOST in dbs_url:
+        isDbs2=True
+        isDbs3=False
+        dbs2_url=dbs_url
+        if dbs2_url in known_dbs2_urls:
+            dbs3_url=dbs2to3[dbs2_url]
+        else:
+            msg="No mapping to a DBS2 instance possible for dbs_url=%s"%dbs_url
+            common.logger.debug(msg)
+            dbs3_url=None
+    else:
+        msg="WARNING, unknwon DBS url: %s. Assume it is some DBS3 test instance"%dbs_url
+        common.logger.info(msg)
+        isDbs2=False
+        isDbs3=True
+        dbs3_url = dbs_url
+        dbs2_url = None
+
+    return (isDbs2, isDbs3, dbs2_url, dbs3_url)
+
+
 ####################################
 if __name__ == '__main__':
     print 'sys.argv[1] =',sys.argv[1]

@@ -14,9 +14,9 @@ echo "CRABDIR = $CRABdir"
 CRABtag=$tag
 DBSAPItag="DBS_2_0_9_patch_9"
 DLSAPItag="DLS_1_1_3"
-PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_58"
+PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_59"
 WMCOREtag="WMCORE_CRAB2_3"
-DBS3tag="DBS_3_1_8c"
+DBS3tag="DBS_3_1_9c"
 
 
 ## download CRAB from GITHUB and cleanup the code a bit
