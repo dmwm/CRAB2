@@ -115,98 +115,21 @@ class DataDiscovery:
         """
         # make assumption that same host won't be used for both
         # this check should catch most deployed servers
-        DBS2HOST = 'cmsdbsprod.cern.ch'
-        DBS3HOST = 'cmsweb.cern.ch'
-        useDBS2 = False
-        useDBS3 = False
+
+        (useDBS2, useDBS3, dbs2_url, dbs3_url) = verify_dbs_url(self)
+        if useDBS2: dbs_url=dbs2_url
+        if useDBS3: dbs_url=dbs3_url
         verifyDBS23 = False
         useDAS = False
 
-        # knwon DBS end-points
-        known_dbs_urls = []
-        global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
-        global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
-        caf_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_caf_analysis_01/servlet/DBSServlet"
-        local_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet"
-        local_dbs2_02 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_02/servlet/DBSServlet"
-        caf_dbs3_01   = "https://cmsweb.cern.ch/dbs/prod/caf01/DBSReader"
-        local_dbs3_01 = "https://cmsweb.cern.ch/dbs/prod/phys01/DBSReader"
-        local_dbs3_02 = "https://cmsweb.cern.ch/dbs/prod/phys02/DBSReader"
-        local_dbs3_03 = "https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader"
-        known_dbs_urls = [ \
-            global_dbs2, caf_dbs2_01, local_dbs2_01, local_dbs2_02, \
-            global_dbs3, caf_dbs3_01, local_dbs3_01, local_dbs2_01, local_dbs3_03 \
-            ]
-
-        ## correspondence maps of DBS2/3 isntances
-        dbs2to3={}
-        dbs3to2={}
-        dbs2to3[global_dbs2] = global_dbs3
-        dbs2to3[caf_dbs2_01]   = caf_dbs3_01
-        dbs2to3[local_dbs2_01] = local_dbs3_01
-        dbs2to3[local_dbs2_02] = local_dbs3_02
-        dbs2to3[local_dbs3_01] = local_dbs3_01
-        dbs2to3[local_dbs3_02] = local_dbs3_02
-        dbs2to3[local_dbs3_03] = local_dbs3_03
-        # reverse map:
-        for key,value in dbs2to3.iteritems():
-            dbs3to2[value]=key
-
-
-
-        ## get DBS URL specified by user (default to global DBS2)
-        dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
-        
-        if self.cfg_params.get('CMSSW.use_dbs3'):
-            useDBS3 = int(self.cfg_params.get('CMSSW.use_dbs3'))==1
-
         if self.cfg_params.get('CMSSW.verify_dbs23'):
             verifyDBS23 = int(self.cfg_params.get('CMSSW.verify_dbs23'))==1
-        if verifyDBS23 and not dbs_url in known_dbs_urls:
-            common.logger.info ("automatic verification DBS2/3 not possible for non standard dbs_url=%s"%dbs_url)
+
+        if verifyDBS23 and not (dbs2_url and dbs3_url) :
+            common.logger.info ("automatic verification DBS2/3 not possible for dbs_url=%s"%dbs_url)
             verifyDBS23 = False
 
-        # support shortcuts for local scope DBS's
-        if dbs_url == "dbs2_caf_01" :  dbs_url=caf_dbs2_01
-        if dbs_url == "analysis_01" :  dbs_url=local_dbs2_01
-        if dbs_url == "analysis_02" :  dbs_url=local_dbs2_02
-        if dbs_url == "caf01"  :       dbs_url=caf_dbs3_01
-        if dbs_url == "phys01" :       dbs_url=local_dbs3_01
-        if dbs_url == "phys02" :       dbs_url=local_dbs3_02
-        if dbs_url == "phys03" :       dbs_url=local_dbs3_03
-
-        # if user asked for DBS3, remap DBS url if needed
-        # and possible, i.e. using a known URL
-        if useDBS3 and dbs_url in known_dbs_urls:
-            dbs_url = dbs2to3 [dbs_url]
         common.logger.info("Accessing DBS at: "+dbs_url)
-
-
-        endpoint_components = urlparse.urlsplit(dbs_url)
-
-        if endpoint_components.hostname == DBS3HOST or useDBS3:
-            useDBS3=True
-            dbs_url_3 = dbs_url
-            if dbs_url in known_dbs_urls:
-                dbs_url_2 = dbs3to2[dbs_url]
-        elif endpoint_components.hostname == DBS2HOST:
-            useDBS2=True
-            dbs_url_2 = dbs_url
-            if dbs_url in known_dbs_urls:
-                dbs_url_3 = dbs2to3[dbs_url]
-        else:
-            # if we do not know this URL, better be a DBS3 test instance
-            useDBS3=True
-            dbs_url_3 = dbs_url
-
-        
-        if useDBS2 and useDBS3:
-            msg = "trying to use DBS2 and DBS3 at same time ?"
-            raise  CrabException(msg)
-
-        if self.cfg_params.get('CMSSW.use_das'):
-            useDAS = int(self.cfg_params.get('CMSSW.use_das'))==1
-
 
         if useDBS2:
             common.logger.info("Will do Data Discovery using  DBS2")
@@ -252,7 +175,7 @@ class DataDiscovery:
         ## service API
         if useDBS2 or verifyDBS23:
             args = {}
-            args['url']     = dbs_url_2
+            args['url']     = dbs2_url
             args['level']   = 'CRITICAL'
 
         ## check if has been requested to use the parent info
@@ -283,7 +206,7 @@ class DataDiscovery:
             #common.logger.info("looking up DBS3 ...")
             from dbs.apis.dbsClient import DbsApi
             start_time=time.time()
-            api3 = DbsApi(dbs_url_3)
+            api3 = DbsApi(dbs3_url)
             files3 = self.queryDbs3(api3,path=self.datasetPath,runselection=runselection,useParent=useparent)
             elapsed=time.time() - start_time
             common.logger.info("DBS3 lookup took %5.2f sec" % elapsed)
