@@ -677,7 +677,7 @@ if __name__ == "__main__":
         #url_local='https://cmsweb-testbed.cern.ch/dbs/int/global/'
         url_local = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
     else:
-        url_local = arg_value_dict['srcUrl']
+        url_local = arg_value_dict['dstUrl']
         if url_local[-1] != '/':
             url_local = url_local + '/'
 
