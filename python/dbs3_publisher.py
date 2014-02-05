@@ -190,6 +190,7 @@ def get_arg():
           filename = os.path.basename(a)
           #print "fjr_dir = ", fjr_dir 
           #print "filename = ", filename
+          arg_value_dict['fjr_dir']=fjr_dir
           arg_fjrs.append(filename)
           #print "arg_fjrs = ", arg_fjrs
 
