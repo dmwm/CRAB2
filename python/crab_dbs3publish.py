@@ -10,18 +10,128 @@
 import common
 from crab_util import *
 from crab_exceptions import *
+from RestClient.ErrorHandling.RestClientExceptions import HTTPError
+
 #from dbs.apis.dbsClient import *
 
 
-def format_file_3(file, output_config, dataset):
-    pass
+def format_file_3(file):
+
+    nf = {'logical_file_name': file['lfn'],
+          'file_type': 'EDM',
+          'check_sum': unicode(file['cksum']),
+          'event_count': file['inevents'],
+          'file_size': file['filesize'],
+          'adler32': file['adler32'],
+          'file_parent_list': [{'file_parent_lfn': i} for i in file['parents']],
+          }
+    file_lumi_list = []
+    for run, lumis in file['runlumi'].items():
+        for lumi in lumis:
+            file_lumi_list.append({'lumi_section_num': int(lumi), 'run_num': int(run)})
+    nf['file_lumi_list'] = file_lumi_list
+    if file.get("md5") != "asda" and file.get("md5") != "NOTSET": # asda is the silly value that MD5 defaults to
+        nf['md5'] = file['md5']
+    return nf
 
 def createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files):
 
-    pass
+    file_conf_list = []
+    file_parent_list = []
+    for file in files:
+        file_conf = output_config.copy()
+        file_conf_list.append(file_conf)
+        file_conf['lfn'] = file['logical_file_name']
+        for parent_lfn in file.get('file_parent_list', []):
+            file_parent_list.append({'logical_file_name': file['logical_file_name'], 'parent_logical_file_name': parent_lfn['file_parent_lfn']})
+        del file['file_parent_list']
+    blockDump = { \
+         'dataset_conf_list': [output_config],
+         'file_conf_list': file_conf_list,
+         'files': files,
+         'processing_era': processing_era_config,
+         'primds': primds_config,
+         'dataset': dataset_config,
+         'acquisition_era': acquisition_era_config,
+         'block': block_config,
+         'file_parent_list': file_parent_list,
+    }
+    blockDump['block']['file_count'] = len(files)
+    blockDump['block']['block_size'] = sum([int(file[u'file_size']) for file in files])
+    return blockDump
 
-def migrateDBS3(migrateApi, destReadApi, sourceURL, inputDataset):
-    pass
+
+def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
+    # Submit migration
+    existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
+    print destReadApi.url
+    print existing_datasets
+    should_migrate = False
+    if not existing_datasets or (existing_datasets[0]['dataset'] != inputDataset):
+        should_migrate = True
+        common.logger.info("Dataset %s must be migrated; not in the destination DBS." % inputDataset)
+    if not should_migrate:
+        # The dataset exists in the destination; make sure source and destination
+        # have the same blocks.
+        existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
+        proxy = os.environ.get("SOCKS5_PROXY")
+        source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
+        blocks_to_migrate = source_blocks - existing_blocks
+        common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
+        if blocks_to_migrate:
+            common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(existing_blocks), ", ".join(existing_blocks), inputDataset) )
+            should_migrate = True
+    if should_migrate:
+        sourceURL = sourceApi.url
+        
+        data = {'migration_url': sourceURL, 'migration_input': inputDataset}
+        common.logger.debug("About to submit migrate request for %s" % str(data))
+        try:
+            result = migrateApi.submitMigration(data)
+        except HTTPError, he:
+            if he.msg.find("Requested dataset %s is already in destination" % inputDataset) >= 0:
+                common.logger.info("Migration API believes this dataset has already been migrated.")
+                return destReadApi.listDatasets(dataset=inputDataset, detail=True)
+            common.logger.exception("Request to migrate %s failed." % inputDataset)
+            return []
+        common.logger.debug("Result of migration request %s" % str(result))
+        id = result.get("migration_details", {}).get("migration_request_id")
+        if id == None:
+            common.logger.error("Migration request failed to submit.")
+            common.logger.error("Migration request results: %s" % str(result))
+            return []
+        common.logger.debug("Migration ID: %s" % id)
+        time.sleep(1)
+        # Wait forever, then return to the main loop. Note we don't
+        # fail or cancel anything. Just retry later if users Ctl-C crab
+        # States:
+        # 0=PENDING
+        # 1=IN PROGRESS
+        # 2=COMPLETED
+        # 3=FAILED
+        state=0
+        wait=1
+        while state==0 or state==1:
+            common.logger.debug("About to get migration request for %s." % id)
+            status = migrateApi.statusMigration(migration_rqst_id=id)
+            state = status[0].get("migration_status")
+            common.logger.debug("Migration status: %s" % state)
+            if state == 0 or state == 1:
+                time.sleep(wait)
+                wait=max(wait*2,30)  # give it more time, but check every 30 sec at least
+
+        if state == 0 or state == 1:
+            common.logger.info("Migration of %s has taken too long - will delay publication." % inputDataset)
+            return []
+        if state == 3:
+            common.logger.info("Migration of %s has failed. Full status: %s" % (inputDataset, str(status)))
+            return []
+        common.logger.info("Migration of %s is complete." % inputDataset)
+        existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
+        print inputDataset
+        print existing_datasets
+
+    return existing_datasets
 
 
 def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite):
@@ -38,7 +148,8 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
     blockSize = max_files_per_block
 
     # Submit migration if needed
-    if inputDataset != 'None':
+    if inputDataset.upper() != 'NONE':
+        common.logger.info("Request migration of input dataset and its parents")
         existing_datasets = migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset)
         if not existing_datasets:
             common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
@@ -51,16 +162,11 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         primary_ds_type = existing_datasets[0]['primary_ds_type']
         acquisition_era_name = existing_datasets[0]['acquisition_era_name']
     else :
-        # user generate data
+        common.logger.info("user generate data. No migration needed")
         acquisition_era_name = "CRAB"
         primary_ds_type = 'mc'
 
-    # There's little chance this is correct, but it's our best guess for now.
-    existing_output = destApi.listOutputConfigs(dataset=inputDataset)
-    if not existing_output:
-        common.logger.error("Unable to list output config for input dataset %s." % inputDataset)
-    existing_output = existing_output[0]
-    global_tag = existing_output['crab2_tag']
+    global_tag = 'crab2_tag'
 
     processing_era_config = {'processing_version': 1, 'description': 'crab2'}
 
@@ -155,8 +261,9 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         count = 0
         blockCount = 0
         if len(dbsFiles) < max_files_per_block:
-            common.logger.debug("WF is not expired %s and the list is %s" %(workflow, self.not_expired_wf))
-            if not self.not_expired_wf:
+            #common.logger.debug("WF is not expired %s and the list is %s" %(workflow, self.not_expired_wf))
+            #if not self.not_expired_wf:
+            if True:
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
                 files_to_publish = dbsFiles[count:count+blockSize]
                 try:
@@ -172,9 +279,6 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                     msg += str(ex)
                     msg += str(traceback.format_exc())
                     common.logger.error(msg)
-            else:
-                common.logger.debug("WF is not expired %s and the list is %s" %(workflow, self.not_expired_wf))
-                return [], [], []
         else:
             while count < len(dbsFiles):
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))

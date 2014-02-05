@@ -341,7 +341,7 @@ class Publisher(Actor):
 
     def run(self):
         """
-        parse of all xml file on res dir and creation of distionary
+        parse of all xml file on res dir and creation of dictionary
         """
         
         task = common._db.getTask()
