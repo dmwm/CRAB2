@@ -6,6 +6,7 @@ import time
 from dbs.apis.dbsClient import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
 
+"""
 #https://cmsweb-testbed.cern.ch/dbs/int/phys03/
 #https://cmsweb-testbed.cern.ch/dbs/prod/global/
 #https://cmsweb-testbed.cern.ch/dbs/int/global/
@@ -38,6 +39,7 @@ print "url_local_writer = ", url_local_writer
 print "url_global_reader = ", url_global_reader
 print "url_migrate = ", url_migrate
 print "##################################################"
+"""
 
 ### general dictionary with info about all the fjrs to publish ###
 blockDump={}
@@ -146,12 +148,14 @@ def get_arg():
   ### -f, --fjr specify the complete path of a fjr to publish
   ### -h, --help help of the script
   #############
-  fjr_dir = ''
   arg_fjrs=[]
+
+  arg_value_dict={'fjr_dir':'','srcUrl':'', 'dstUrl':''}
+
   print "##################################################"
   print "### arguments:"
   try:
-      opts, args = getopt.getopt(sys.argv[1:], "hc:f:", ["help", "continue=", "fjr="])
+      opts, args = getopt.getopt(sys.argv[1:], "hc:f:s:d:", ["help", "continue=", "fjr=", "srcUrl=", "dstUrl"])
       print "opts = " , opts
       print "args = ", args
   except getopt.GetoptError, msg:
@@ -166,10 +170,18 @@ def get_arg():
       #print "o = ", o
       #print "a = ", a
       if o in ("-c", "--continue"):
-          if str.find(a,"crab_")!= -1:
-              fjr_dir = a + '/res/'
-          else: fjr_dir = a    
-          #print "fjr_dir = ", fjr_dir
+          ##### script tp use only with crab task
+          if a[-1] != '/':
+              a = a + '/'
+          if os.path.isdir(a):
+              if os.path.isdir(a + 'res/'):
+                  fjr_dir = a + 'res/'
+              else: fjr_dir = a
+          else:
+              print "fjr_dir does not exist"
+              exit()
+          print "fjr_dir = ", fjr_dir    
+          arg_value_dict['fjr_dir']=fjr_dir
           arg_fjrs=read_res_content(fjr_dir)
           #print "in get_arg arg_fjrs = ", arg_fjrs
       if o in ("-f", "--fjr"):
@@ -178,8 +190,17 @@ def get_arg():
           filename = os.path.basename(a)
           #print "fjr_dir = ", fjr_dir 
           #print "filename = ", filename
+          arg_value_dict['fjr_dir']=fjr_dir
           arg_fjrs.append(filename)
           #print "arg_fjrs = ", arg_fjrs
+
+      if o in ("-s", "--srcUrl"):
+          #print "url of input DBS = ", a        
+          arg_value_dict['srcUrl']= a
+
+      if o in ("-d", "--dstUrl"):
+          #print "url of target DBS = ", a        
+          arg_value_dict['dstUrl'] = a
 
       if o in ("-h", "--help"):
           print "usage: python parser_dbs3.py "
@@ -190,7 +211,7 @@ def get_arg():
           #print __doc__
 
   print "##################################################"
-  return arg_fjrs, fjr_dir        
+  return arg_fjrs, arg_value_dict        
   
 def summary_block_publication(list, path, summary_file_name):
     #print "list = ", list
@@ -308,6 +329,7 @@ def create_blockDump_commonpart(doc, blockDump):
   primds_dictionary={}
   primds_dictionary['primary_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]
   #print "in primds_dictionary, primds_ds_name = ", primds_dictionary['primary_ds_name']
+
   type = dbs3api_global.listPrimaryDatasets(primary_ds_name=primds_dictionary['primary_ds_name'])
   #print "type = ", type
 
@@ -637,16 +659,60 @@ def check_and_migrate_block_parents(list):
 
 ##### main #####
 if __name__ == "__main__":
-    arg_list, fjr_dir= get_arg()
+    arg_fjr_list, arg_value_dict= get_arg()
     print "------"
-    print arg_list
-    print fjr_dir
+    print arg_fjr_list
+    fjr_dir = arg_value_dict['fjr_dir']
+    print "fjr_dir = ", fjr_dir
+    print arg_value_dict
     print "------"
-    if len(arg_list)==0:
-      exit()
+    if len(arg_fjr_list)==0:
+        exit()
+
+    
+    print "##################################################"
+    print "defining DBS instances to use"
+    ### local DBS3 where to publish the user dataset
+    if arg_value_dict['dstUrl']=='':
+        ### THE LAST
+        #url_local='https://cmsweb-testbed.cern.ch/dbs/int/global/'
+        url_local = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
+    else:
+        url_local = arg_value_dict['dstUrl']
+        if url_local[-1] != '/':
+            url_local = url_local + '/'
+
+    ########################
+    url_local_writer = url_local + 'DBSWriter'
+    dbs3api_local = DbsApi(url=url_local_writer)
+
+    ### global DBS3 from where read info about parents
+    if arg_value_dict['srcUrl']=='':
+        url_global = 'https://cmsweb.cern.ch/dbs/prod/global/'
+    else:
+        url_global = arg_value_dict['srcUrl']
+        if url_global[-1] != '/':
+            url_global = url_global + '/'
+
+    url_global_reader = url_global + 'DBSReader'
+    dbs3api_global = DbsApi(url=url_global_reader)
+    ### JUST FOR THE TEST ####
+    #url_global_reader='https://cmsweb-testbed.cern.ch/dbs/int/global/DBSReader'
+    ###########################################
+
+    ### migration from global to local
+    url_migrate=url_local + 'DBSMigrate'
+    dbs3api_migrate=DbsApi(url=url_migrate)
+    ##########################################
+
+    print "url_local_writer = ", url_local_writer
+    print "url_global_reader = ", url_global_reader
+    print "url_migrate = ", url_migrate
+    print "##################################################"
+    
 
     # fjr is the name of fjr to publish
-    for fjr in arg_list:
+    for fjr in arg_fjr_list:
         print "---> fjr = ", fjr 
         doc_list, fjr_list = check_fjr(fjr_dir, fjr, doc_list, fjr_list)
 
