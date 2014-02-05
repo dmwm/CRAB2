@@ -4,6 +4,8 @@ import time, glob
 from Actor import *
 from crab_util import *
 from crab_exceptions import *
+from crab_dbs3publish import *
+
 from ProdCommon.FwkJobRep.ReportParser import readJobReport
 from ProdCommon.FwkJobRep.ReportState import checkSuccess
 from ProdCommon.MCPayloads.WorkflowSpec import WorkflowSpec
@@ -343,7 +345,7 @@ class Publisher(Actor):
         """
         
         task = common._db.getTask()
-        good_list=[]
+        good_list=[]   # list of fjr's to publish
 
         for job in task.getJobs():
             fjr = self.fjrDirectory + job['outputFiles'][-1]
@@ -354,7 +356,70 @@ class Publisher(Actor):
             if len(reports)>0:
                if reports[0].status == "Success":
                   good_list.append(fjr)
+
+        pubToDBS2 = True
+        pubToDBS3 = False
+        if  self.cfg_params.get('CMSSW.publish_dbs3',None)=="1":
+            pubToDBS2 = False
+            pubToDBS3 = True
+        if pubToDBS2 :
+            status = self.DBS2Publish(good_list)
+        elif pubToDBS3:
+            from crab_dbs3publish import *
+            argsForDbs3 = self.PrepareForDBS3Publish(good_list)
+            sourceApi    = argsForDbs3['sourceApi']
+            inputDataset = argsForDbs3['inputDataset']
+            toPublish    = argsForDbs3['toPublish']
+            destApi      = argsForDbs3['destApi']
+            destReadApi  = argsForDbs3['destReadApi']
+            migrateApi   = argsForDbs3['migrateApi']
+            originSite   = argsForDbs3['originSite']
+            (failed,published,results) = publishInDBS3(\
+                sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
+            if len(failed) == 0:
+                status='0'
+            else:
+                status='1'
+        else:
+            raise CrabException('could not define wether to publish to DBS2 or DBS3')
+
+        return status
+
+    def PrepareForDBS3Publish(self,good_list):
+        from dbs.apis.dbsClient import DbsApi as Dbs3Api
+
+        # extract information from self and good_list and format as liked by publishInDBS3 function
+
+        # simple stuff
+        (isDbs2, isDbs3, dbs2_url, dbs3_url) =  verify_dbs_url(self)
+        sourceUrl = dbs3_url
+        destUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter'
+        destReadUrl  = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader'
+        migrateUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSMigrate'
+        inputDataset = self.cfg_params.get('CMSSW.datasetpath','None')
+        originSite = 'srm.unl.edu'
+
+        sourceApi = Dbs3Api(url=sourceUrl)
+        destinationApi = Dbs3Api(url=destUrl)
+        destinationReadApi = Dbs3Api(url=destReadUrl) # be safe, use RO Api unless really want to write
+        migrateApi = Dbs3Api(url=migrateUrl)
         
+        # now the list of files, parent, lumis...
+        toPublish={}
+
+        # all done
+        argsForDbs3 = { \
+            'sourceApi' : sourceApi,
+            'inputDataset' : inputDataset,
+            'toPublish' : toPublish,
+            'destApi' : destinationApi,
+            'destReadApi' : destinationReadApi,
+            'migrateApi' : migrateApi,
+            'originSite' : originSite,
+        }
+        return argsForDbs3
+        
+    def DBS2Publish(self, good_list):
         ####################################################
         if self.no_inp == 1:
             file_list = self.remove_input_from_fjr(good_list)
