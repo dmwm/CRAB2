@@ -64,8 +64,6 @@ def createBulkBlock(output_config, processing_era_config, primds_config, dataset
 def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     # Submit migration
     existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
-    print destReadApi.url
-    print existing_datasets
     should_migrate = False
     if not existing_datasets or (existing_datasets[0]['dataset'] != inputDataset):
         should_migrate = True
@@ -81,6 +79,8 @@ def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         if blocks_to_migrate:
             common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(existing_blocks), ", ".join(existing_blocks), inputDataset) )
             should_migrate = True
+        else:
+            common.logger.info("No migration needed")
     if should_migrate:
         sourceURL = sourceApi.url
         
@@ -128,8 +128,6 @@ def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
             return []
         common.logger.info("Migration of %s is complete." % inputDataset)
         existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
-        print inputDataset
-        print existing_datasets
 
     return existing_datasets
 
