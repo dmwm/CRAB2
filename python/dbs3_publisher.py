@@ -623,7 +623,7 @@ def check_and_migrate_block_parents(list):
                 elif migration_status_now[0]['migration_status'] == 2:
                     print "status 2 migration ok"
 
-        if len(migrated_now) == 0 and tot_now_migrated_status > 0:
+        if len(migrated_now) != 0 and tot_now_migrated_status > 0:
             print "migration from global to local dbs not completed"
             exit()
              
