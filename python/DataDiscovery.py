@@ -351,6 +351,9 @@ class DataDiscovery:
         #    result=api.listBlocks(dataset=self.datasetPath, run_num=runselection)
         #else:
         result=api.listBlocks(dataset=self.datasetPath)
+        if len(result)==0:
+            msg="no block found for dataset %s. Check dataset name and dbs_url"%self.datasetPath
+            raise CrabException(msg)
 
         for block in result:
             blockName = block['block_name']
