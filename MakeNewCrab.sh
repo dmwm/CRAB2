@@ -30,7 +30,7 @@ cd ${rel}
 ./configure
 
 cd /afs/cern.ch/cms/ccs/wm/www/Crab/Docs
-ln -sfv ../../../scripts/Crab/${ver}.tgz .
-ln -sfv ${ver}.tgz CRAB_new.tgz
+ln -sfv ../../../scripts/Crab/${rel}.tgz .
+ln -sfv ${rel}.tgz CRAB_new.tgz
 
 popd
