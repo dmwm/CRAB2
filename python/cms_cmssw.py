@@ -10,6 +10,7 @@ import re
 import Scram
 from Splitter import JobSplitter
 from Downloader import Downloader
+import Lexicon
 try:
     import json
 except:
@@ -226,6 +227,11 @@ class Cmssw(JobType):
                 raise CrabException('Cannot publish output data, because you did not specify USER.publish_data_name parameter in the crab.cfg file')
             else:
                 self.processedDataset = cfg_params['USER.publish_data_name']
+                try:
+                    Lexicon.publishdatasetname(self.processedDataset)
+                except Exception, text:
+                    msg = "ERROR in publish_data_name :\n%s" % text
+                    raise CrabException(msg)
 
         self.conf = {}
         self.conf['pubdata'] = None
