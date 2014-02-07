@@ -387,6 +387,12 @@ class Publisher(Actor):
 
     def PrepareForDBS3Publish(self,good_list):
         from dbs.apis.dbsClient import DbsApi as Dbs3Api
+        from ProdCommon.FwkJobRep.ReportParser import readJobReport
+
+        print "SB**********************************************************"
+        print good_list
+        print "SB**********************************************************"
+        
 
         # extract information from self and good_list and format as liked by publishInDBS3 function
 
@@ -405,7 +411,39 @@ class Publisher(Actor):
         migrateApi = Dbs3Api(url=migrateUrl)
         
         # now the list of files, parent, lumis...
+        # the publishInDBS3 copyed from CRAB3 needs the info in the toPublish dictionary
+        # format is: {outdataset:files}
+        #   outdataset = dataset to be published
+        #   files is a list of dictionaries, one per LFN, each entry keys are:
+        # 
+        #
+        
         toPublish={}
+
+        for crabFjr in good_list:                 # this is the list of FJR's in crab res
+            fjr=readJobReport(crabFjr)[0]         # parse into python
+            for outFile in fjr.files:             # one fjr may have multiple output files
+                dset_info=outFile.dataset[0]      # better there is only one dataset per file !
+                primds=dset_info['PrimaryDataset']
+                procds=dset_info['ProcessedDataset']
+                outdataset="/%s/%s/USER" % (primds, procds)
+                if not toPublish.has_key(procds):
+                    toPublish[procds]=[]
+                fileDic={}                          # prepare dictionary for this LFN to publish
+                fileDic['cksum']=outFile['Checksum']
+                fileDic['acquisitionera']="null"
+                fileDic['globaltag']="None"
+                fileDic['publishname']=procds
+                fileDic['outdataset']=outdataset
+                fileDic['lfn']=outFile['LFN']
+                fileDic['filesize']=outFile['Size']
+                fileDic['runlumi']=outFile.getLumiSections()
+                fileDic['parents']=outFile.parentLFNs()
+                fileDic['location']=outFile['SEName']
+                fileDic['inevents']=outFile['TotalEvents']
+                fileDic['md5']="asda"
+                toPublis[procds].append(fileDic)    # add it to the structure
+
 
         # all done
         argsForDbs3 = { \
