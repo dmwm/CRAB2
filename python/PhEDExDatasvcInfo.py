@@ -6,6 +6,7 @@ from WorkSpace import *
 from urlparse import urlparse 
 from LFNBaseName import *
 from crab_util import getUserName
+import Lexicon
 
 class PhEDExDatasvcInfo:
     def __init__( self , cfg_params=None, config=None ):
@@ -115,6 +116,12 @@ class PhEDExDatasvcInfo:
         Return full SE endpoint and related infos
         '''
         self.lfn = self.getLFN()
+        try:
+            # this is not a full LFN, only the path part, add dummy filename for validating format
+            Lexicon.lfn(self.lfn+"dummy.root")
+        except Exception, text:
+            msg = "PhEDExDataSvcInfo.py: ERROR in generated LFN :\n%s" % text
+            raise CrabException(msg)
  
         #extract the PFN for the given node,LFN,protocol
         endpoint = self.getStageoutPFN()
