@@ -91,6 +91,7 @@ class SchedulerArc(SchedulerGrid):
             # so if X509_USER_PROXY isn't set, it won't work.
             os.environ['X509_USER_PROXY'] = '/tmp/x509up_u' + str(os.getuid())
 
+        os.environ['LD_LIBRARY_PATH'] = '/lib64/:/usr/lib64/:' + os.environ.get('LD_LIBRARY_PATH', "")
         SchedulerGrid.configure(self, cfg_params)
         self.environment_unique_identifier = None
 
