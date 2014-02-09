@@ -49,13 +49,13 @@ class Publisher(Actor):
 
         self.globalDBS=cfg_params.get('CMSSW.dbs_url',"http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
 
-        if not cfg_params.has_key('USER.dbs_url_for_publication'):
-            msg = "Warning. The [USER] section does not have 'dbs_url_for_publication'"
-            msg = msg + " entry, necessary to publish the data.\n"
-            msg = msg + "Use the command **crab -publish -USER.dbs_url_for_publication=dbs_url_for_publication*** \nwhere dbs_url_for_publication is your local dbs instance."
-            raise CrabException(msg)
+        #if not cfg_params.has_key('USER.dbs_url_for_publication'):
+        #    msg = "Warning. The [USER] section does not have 'dbs_url_for_publication'"
+        #    msg = msg + " entry, necessary to publish the data.\n"
+        #    msg = msg + "Use the command **crab -publish -USER.dbs_url_for_publication=dbs_url_for_publication*** \nwhere dbs_url_for_publication is your local dbs instance."
+        #    raise CrabException(msg)
 
-        self.DBSURL=cfg_params['USER.dbs_url_for_publication']
+        self.DBSURL=cfg_params.get('USER.dbs_url_for_publication','DBS3/phys03')
         common.logger.info('<dbs_url_for_publication> = '+self.DBSURL)
         if (self.DBSURL == "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet") or (self.DBSURL == "https://cmsdbsprod.cern.ch:8443/cms_dbs_prod_global_writer/servlet/DBSServlet"):
             msg = "You can not publish your data in the globalDBS = " + self.DBSURL + "\n" 
