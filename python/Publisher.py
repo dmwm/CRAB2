@@ -365,7 +365,6 @@ class Publisher(Actor):
         if pubToDBS2 :
             status = self.DBS2Publish(good_list)
         elif pubToDBS3:
-            from crab_dbs3publish import *
             argsForDbs3 = self.PrepareForDBS3Publish(good_list)
             sourceApi    = argsForDbs3['sourceApi']
             inputDataset = argsForDbs3['inputDataset']
@@ -373,7 +372,7 @@ class Publisher(Actor):
             destApi      = argsForDbs3['destApi']
             destReadApi  = argsForDbs3['destReadApi']
             migrateApi   = argsForDbs3['migrateApi']
-            originSite   = argsForDbs3['originSite']
+            originSite   = argsForDbs3['origin_site_name']
             (failed,published,results) = publishInDBS3(\
                 sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
             if len(failed) == 0:
@@ -389,60 +388,63 @@ class Publisher(Actor):
         from dbs.apis.dbsClient import DbsApi as Dbs3Api
         from ProdCommon.FwkJobRep.ReportParser import readJobReport
 
-        print "SB**********************************************************"
-        print good_list
-        print "SB**********************************************************"
-        
-
         # extract information from self and good_list and format as liked by publishInDBS3 function
+        originSite = None
 
-        # simple stuff
         (isDbs2, isDbs3, dbs2_url, dbs3_url) =  verify_dbs_url(self)
         sourceUrl = dbs3_url
         destUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter'
         destReadUrl  = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader'
         migrateUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSMigrate'
         inputDataset = self.cfg_params.get('CMSSW.datasetpath','None')
-        originSite = 'srm.unl.edu'
 
         sourceApi = Dbs3Api(url=sourceUrl)
         destinationApi = Dbs3Api(url=destUrl)
-        destinationReadApi = Dbs3Api(url=destReadUrl) # be safe, use RO Api unless really want to write
+        # be safe, use RO Api unless really want to write
+        destinationReadApi = Dbs3Api(url=destReadUrl)
         migrateApi = Dbs3Api(url=migrateUrl)
         
-        # now the list of files, parent, lumis...
-        # the publishInDBS3 copyed from CRAB3 needs the info in the toPublish dictionary
+        # the publishInDBS3 copied from CRAB3 needs the info in the toPublish dictionary
         # format is: {outdataset:files}
-        #   outdataset = dataset to be published
-        #   files is a list of dictionaries, one per LFN, each entry keys are:
-        # 
-        #
+        #   outdataset = dataset to be published (full name /prim/proc/tier)
+        #   files is a list of dictionaries, one per LFN
         
         toPublish={}
 
         for crabFjr in good_list:                 # this is the list of FJR's in crab res
             fjr=readJobReport(crabFjr)[0]         # parse into python
-            for outFile in fjr.files:             # one fjr may have multiple output files
+            for outFile in fjr.files:             # one fjr may have multiple output LFN's
                 dset_info=outFile.dataset[0]      # better there is only one dataset per file !
                 primds=dset_info['PrimaryDataset']
                 procds=dset_info['ProcessedDataset']
-                outdataset="/%s/%s/USER" % (primds, procds)
-                if not toPublish.has_key(procds):
-                    toPublish[procds]=[]
-                fileDic={}                          # prepare dictionary for this LFN to publish
+                tier=dset_info['DataTier']
+                outdataset="/%s/%s/%s" % (primds, procds,tier)
+                if not toPublish.has_key(outdataset):
+                    toPublish[outdataset]=[]
+                fileDic={}                          # prepare dictionary to publish this LFN
                 fileDic['cksum']=outFile['Checksum']
+                fileDic['md5']="NOTSET"
+                fileDic['adler32']="NOTSET"
                 fileDic['acquisitionera']="null"
                 fileDic['globaltag']="None"
                 fileDic['publishname']=procds
                 fileDic['outdataset']=outdataset
+                fileDic['swversion']=dset_info['ApplicationVersion']
                 fileDic['lfn']=outFile['LFN']
                 fileDic['filesize']=outFile['Size']
-                fileDic['runlumi']=outFile.getLumiSections()
+                fileDic['runlumi']=outFile['Runs']
                 fileDic['parents']=outFile.parentLFNs()
-                fileDic['location']=outFile['SEName']
+                if originSite:
+                    if outFile['SEName'] != originSite:
+                        msg = "ERROR: not all files to be published have same location"
+                        msg += "file %s has origin %s, while previous files have %s\n" %\
+                            outFile['LFN'], outFile['SEName'], originSite
+                        raise CrabException(msg)
+                else:
+                    originSite = outFile['SEName']
                 fileDic['inevents']=outFile['TotalEvents']
-                fileDic['md5']="asda"
-                toPublis[procds].append(fileDic)    # add it to the structure
+
+                toPublish[outdataset].append(fileDic)    # add dictionary to files list
 
 
         # all done
@@ -453,7 +455,7 @@ class Publisher(Actor):
             'destApi' : destinationApi,
             'destReadApi' : destinationReadApi,
             'migrateApi' : migrateApi,
-            'originSite' : originSite,
+            'origin_site_name' : originSite
         }
         return argsForDbs3
         
