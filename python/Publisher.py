@@ -49,13 +49,13 @@ class Publisher(Actor):
 
         self.globalDBS=cfg_params.get('CMSSW.dbs_url',"http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet")
 
-        if not cfg_params.has_key('USER.dbs_url_for_publication'):
-            msg = "Warning. The [USER] section does not have 'dbs_url_for_publication'"
-            msg = msg + " entry, necessary to publish the data.\n"
-            msg = msg + "Use the command **crab -publish -USER.dbs_url_for_publication=dbs_url_for_publication*** \nwhere dbs_url_for_publication is your local dbs instance."
-            raise CrabException(msg)
+        #if not cfg_params.has_key('USER.dbs_url_for_publication'):
+        #    msg = "Warning. The [USER] section does not have 'dbs_url_for_publication'"
+        #    msg = msg + " entry, necessary to publish the data.\n"
+        #    msg = msg + "Use the command **crab -publish -USER.dbs_url_for_publication=dbs_url_for_publication*** \nwhere dbs_url_for_publication is your local dbs instance."
+        #    raise CrabException(msg)
 
-        self.DBSURL=cfg_params['USER.dbs_url_for_publication']
+        self.DBSURL=cfg_params.get('USER.dbs_url_for_publication','DBS3/phys03')
         common.logger.info('<dbs_url_for_publication> = '+self.DBSURL)
         if (self.DBSURL == "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet") or (self.DBSURL == "https://cmsdbsprod.cern.ch:8443/cms_dbs_prod_global_writer/servlet/DBSServlet"):
             msg = "You can not publish your data in the globalDBS = " + self.DBSURL + "\n" 
@@ -357,15 +357,14 @@ class Publisher(Actor):
                if reports[0].status == "Success":
                   good_list.append(fjr)
 
-        pubToDBS2 = True
-        pubToDBS3 = False
-        if  self.cfg_params.get('CMSSW.publish_dbs3',None)=="1":
-            pubToDBS2 = False
-            pubToDBS3 = True
+        pubToDBS2 = False
+        pubToDBS3 = True
+        if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
+            pubToDBS2 = True
+            pubToDBS3 = False
         if pubToDBS2 :
             status = self.DBS2Publish(good_list)
         elif pubToDBS3:
-            from crab_dbs3publish import *
             argsForDbs3 = self.PrepareForDBS3Publish(good_list)
             sourceApi    = argsForDbs3['sourceApi']
             inputDataset = argsForDbs3['inputDataset']
@@ -373,7 +372,7 @@ class Publisher(Actor):
             destApi      = argsForDbs3['destApi']
             destReadApi  = argsForDbs3['destReadApi']
             migrateApi   = argsForDbs3['migrateApi']
-            originSite   = argsForDbs3['originSite']
+            originSite   = argsForDbs3['origin_site_name']
             (failed,published,results) = publishInDBS3(\
                 sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
             if len(failed) == 0:
@@ -387,25 +386,66 @@ class Publisher(Actor):
 
     def PrepareForDBS3Publish(self,good_list):
         from dbs.apis.dbsClient import DbsApi as Dbs3Api
+        from ProdCommon.FwkJobRep.ReportParser import readJobReport
 
         # extract information from self and good_list and format as liked by publishInDBS3 function
+        originSite = None
 
-        # simple stuff
         (isDbs2, isDbs3, dbs2_url, dbs3_url) =  verify_dbs_url(self)
         sourceUrl = dbs3_url
         destUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter'
         destReadUrl  = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader'
         migrateUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSMigrate'
         inputDataset = self.cfg_params.get('CMSSW.datasetpath','None')
-        originSite = 'srm.unl.edu'
 
         sourceApi = Dbs3Api(url=sourceUrl)
         destinationApi = Dbs3Api(url=destUrl)
-        destinationReadApi = Dbs3Api(url=destReadUrl) # be safe, use RO Api unless really want to write
+        # be safe, use RO Api unless really want to write
+        destinationReadApi = Dbs3Api(url=destReadUrl)
         migrateApi = Dbs3Api(url=migrateUrl)
         
-        # now the list of files, parent, lumis...
+        # the publishInDBS3 copied from CRAB3 needs the info in the toPublish dictionary
+        # format is: {outdataset:files}
+        #   outdataset = dataset to be published (full name /prim/proc/tier)
+        #   files is a list of dictionaries, one per LFN
+        
         toPublish={}
+
+        for crabFjr in good_list:                 # this is the list of FJR's in crab res
+            fjr=readJobReport(crabFjr)[0]         # parse into python
+            for outFile in fjr.files:             # one fjr may have multiple output LFN's
+                dset_info=outFile.dataset[0]      # better there is only one dataset per file !
+                primds=dset_info['PrimaryDataset']
+                procds=dset_info['ProcessedDataset']
+                tier=dset_info['DataTier']
+                outdataset="/%s/%s/%s" % (primds, procds,tier)
+                if not toPublish.has_key(outdataset):
+                    toPublish[outdataset]=[]
+                fileDic={}                          # prepare dictionary to publish this LFN
+                fileDic['cksum']=outFile['Checksum']
+                fileDic['md5']="NOTSET"
+                fileDic['adler32']="NOTSET"
+                fileDic['acquisitionera']="null"
+                fileDic['globaltag']="None"
+                fileDic['publishname']=procds
+                fileDic['outdataset']=outdataset
+                fileDic['swversion']=dset_info['ApplicationVersion']
+                fileDic['lfn']=outFile['LFN']
+                fileDic['filesize']=outFile['Size']
+                fileDic['runlumi']=outFile['Runs']
+                fileDic['parents']=outFile.parentLFNs()
+                if originSite:
+                    if outFile['SEName'] != originSite:
+                        msg = "ERROR: not all files to be published have same location"
+                        msg += "file %s has origin %s, while previous files have %s\n" %\
+                            outFile['LFN'], outFile['SEName'], originSite
+                        raise CrabException(msg)
+                else:
+                    originSite = outFile['SEName']
+                fileDic['inevents']=outFile['TotalEvents']
+
+                toPublish[outdataset].append(fileDic)    # add dictionary to files list
+
 
         # all done
         argsForDbs3 = { \
@@ -415,7 +455,7 @@ class Publisher(Actor):
             'destApi' : destinationApi,
             'destReadApi' : destinationReadApi,
             'migrateApi' : migrateApi,
-            'originSite' : originSite,
+            'origin_site_name' : originSite
         }
         return argsForDbs3
         

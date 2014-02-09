@@ -7,6 +7,9 @@
 #
 #
 
+import uuid
+import traceback
+import pprint
 import common
 from crab_util import *
 from crab_exceptions import *
@@ -92,13 +95,13 @@ def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
             if he.msg.find("Requested dataset %s is already in destination" % inputDataset) >= 0:
                 common.logger.info("Migration API believes this dataset has already been migrated.")
                 return destReadApi.listDatasets(dataset=inputDataset, detail=True)
-            common.logger.exception("Request to migrate %s failed." % inputDataset)
+            common.logger.info("ERROR: Request to migrate %s failed." % inputDataset)
             return []
         common.logger.debug("Result of migration request %s" % str(result))
         id = result.get("migration_details", {}).get("migration_request_id")
         if id == None:
-            common.logger.error("Migration request failed to submit.")
-            common.logger.error("Migration request results: %s" % str(result))
+            common.logger.info("ERROR: Migration request failed to submit.")
+            common.logger.info("ERROR: Migration request results: %s" % str(result))
             return []
         common.logger.debug("Migration ID: %s" % id)
         time.sleep(1)
@@ -132,7 +135,7 @@ def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     return existing_datasets
 
 
-def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite):
+def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi,originSite):
     """
     Publish files into DBS3
     """
@@ -141,7 +144,6 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
     failed = []
     published = []
     results = {}
-    targetSE = originSite
     max_files_per_block = 500
     blockSize = max_files_per_block
 
@@ -155,10 +157,11 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
 
         # Get basic data about the parent dataset
         if not (existing_datasets and existing_datasets[0]['dataset'] == inputDataset):
-            common.logger.error("Inconsistent state: %s migrated, but listDatasets didn't return any information")
+            common.logger.info("ERROR: Inconsistent state: %s migrated, but listDatasets didn't return any information")
             return [], [], []
+
         primary_ds_type = existing_datasets[0]['primary_ds_type']
-        acquisition_era_name = existing_datasets[0]['acquisition_era_name']
+        acquisition_era_name = 'CRAB'
     else :
         common.logger.info("user generate data. No migration needed")
         acquisition_era_name = "CRAB"
@@ -178,7 +181,6 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         appName = 'cmsRun'
         appVer = files[0]["swversion"]
         appFam = 'output'
-        seName = targetSE
         # TODO: this is invalid:
         pset_hash = files[0]['publishname'].split("-")[-1]
         gtag = str(files[0]['globaltag'])
@@ -189,14 +191,11 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
             acquisitionera = acquisition_era_name
             
         empty, primName, procName, tier = dbsDatasetPath.split('/')
-        #SB REDO consistently with Crab2
-        
-        # Change bbockelm-name-pset to bbockelm_name-pset
-        procName = "_".join(procName.split("-")[:2]) + "-" + "-".join(procName.split("-")[2:])
-        # NOTE: DBS3 currently chokes if we don't include a processing version / acquisition era
-        procName = "%s-%s-v%d" % (acquisition_era_name, procName, processing_era_config['processing_version'])
-        dbsDatasetPath = "/".join([empty, primName, procName, tier])
-        #END SB REDO
+        #SB dataset names is alredy done properly in Crab2
+        # ans DBS3 now accept Crab2 style naming
+        #procName = "_".join(procName.split("-")[:2]) + "-" + "-".join(procName.split("-")[2:])
+        #procName = "%s-%s-v%d" % (acquisition_era_name, procName, processing_era_config['processing_version'])
+        #dbsDatasetPath = "/".join([empty, primName, procName, tier])
 
         primds_config = {'primary_ds_name': primName, 'primary_ds_type': primary_ds_type}
         common.logger.debug("About to insert primary dataset: %s" % str(primds_config))
@@ -205,7 +204,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
 
         # Find any files already in the dataset so we can skip them
         try:
-            existingDBSFiles = destApi.listFiles(dataset=dbsDatasetPath)
+            existingDBSFiles = destReadApi.listFiles(dataset=dbsDatasetPath)
             existingFiles = [x['logical_file_name'] for x in existingDBSFiles]
             results[datasetPath]['existingFiles'] = len(existingFiles)
         except DbsException, ex:
@@ -214,7 +213,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
             msg = "Error when listing files in DBS"
             msg += str(ex)
             msg += str(traceback.format_exc())
-            common.logger.error(msg)
+            common.logger.info(msg)
         workToDo = False
 
         # Is there anything to do?
@@ -241,31 +240,27 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         dataset_config = {'dataset': dbsDatasetPath,
                           'processed_ds_name': procName,
                           'data_tier_name': tier,
-                          'acquisition_era_name': acquisitionera,
                           'dataset_access_type': 'PRODUCTION', # TODO
                           'physics_group_name': 'CRAB3',
                           'last_modification_date': int(time.time()),
                           }
         common.logger.debug("About to insert dataset: %s" % str(dataset_config))
-        #destApi.insertDataset(dataset_config)
-        del dataset_config['acquisition_era_name']
-        #dataset_config['acquisition_era'] = acquisition_era_config
 
         dbsFiles = []
         for file in files:
             if not file['lfn'] in existingFiles:
-                dbsFiles.append(format_file_3(file, output_config, dbsDatasetPath))
+                dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
         count = 0
         blockCount = 0
         if len(dbsFiles) < max_files_per_block:
             #common.logger.debug("WF is not expired %s and the list is %s" %(workflow, self.not_expired_wf))
             #if not self.not_expired_wf:
-            if True:
+            if True:  #exprired_wf concept does not exist for Crab2
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
                 files_to_publish = dbsFiles[count:count+blockSize]
                 try:
-                    block_config = {'block_name': block_name, 'origin_site_name': seName, 'open_for_writing': 0}
+                    block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
                     common.logger.debug("Inserting files %s into block %s." % ([i['logical_file_name'] for i in files_to_publish], block_name))
                     blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
                     destApi.insertBulkBlock(blockDump)
@@ -273,10 +268,11 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                     blockCount += 1
                 except Exception, ex:
                     failed += [i['logical_file_name'] for i in files_to_publish]
-                    msg = "Error when publishing"
-                    msg += str(ex)
+                    msg = "ERROR when publishing block:\n"
+                    msg += pprint.pformat(blockDump)+"\n\n"
+                    msg += str(ex)+"\n"
                     msg += str(traceback.format_exc())
-                    common.logger.error(msg)
+                    common.logger.info(msg)
         else:
             while count < len(dbsFiles):
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
@@ -287,7 +283,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                             publish_next_iteration.append(file['logical_file_name'])
                         count += blockSize
                         continue
-                    block_config = {'block_name': block_name, 'origin_site_name': seName, 'open_for_writing': 0}
+                    block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
                     #common.logger.debug("Inserting files %s into block %s." % ([i['logical_file_name'] for i in files_to_publish], block_name))
                     blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
                     common.logger.debug("Block to insert: %s\n" % pprint.pformat(blockDump))
@@ -300,13 +296,14 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                     msg = "Error when publishing (%s) " % ", ".join(failed)
                     msg += str(ex)
                     msg += str(traceback.format_exc())
-                    common.logger.error(msg)
+                    common.logger.info(msg)
                     count += blockSize
         results[datasetPath]['files'] = len(dbsFiles) - len(failed)
         results[datasetPath]['blocks'] = blockCount
     published = filter(lambda x: x not in failed + publish_next_iteration, published)
-    common.logger.info("End of publication status: failed %s, published %s, publish_next_iteration %s, results %s" \
-                       % (failed, published, publish_next_iteration, results))
+    common.logger.debug("Results of publication step: results = %s" \
+    common.logger.debug("Summary of file publication for this dataset: failed %d, published %d, publish_next_iteration %d\n results %s" \
+                       % (len(failed), len(published), len(publish_next_iteration))
     return failed, published, results
 
 
