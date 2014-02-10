@@ -2,6 +2,7 @@ from xml.dom import minidom
 import sys
 import getopt
 import uuid
+import copy 
 import time
 from dbs.apis.dbsClient import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
@@ -45,15 +46,15 @@ print "##################################################"
 blockDump={}
 ### description ################
 ## from https://svnweb.cern.ch/trac/CMSDMWM/browser/DBS/trunk/Client/tests/dbsclient_t/unittests/blockdump.dict
-blockDump['dataset_conf_list']=[]  # total (list)
-blockDump['file_conf_list']=[]     # one foreach fjr (list)
-blockDump['files']=[]              # one foreach fjr (list)
-blockDump['processing_era']={}     # total  (dictionary)
-blockDump['primds']={}             # total  (dictionary)
-blockDump['dataset']={}            # total  (dictionary)
-blockDump['acquisition_era']={}    # total  (dictionary)
-blockDump['block']={}              # summary info about files (dictionary)
-blockDump['file_parent_list']=[]   # summary list of parents lfn (list)
+blockDump['dataset_conf_list']=[]  # total (list)   COMMON
+#blockDump['file_conf_list']=[]     # one foreach fjr (list)  BLOCK
+#blockDump['files']=[]              # one foreach fjr (list)  BLOCK
+blockDump['processing_era']={}     # total  (dictionary)   COMMON
+blockDump['primds']={}             # total  (dictionary)   COMMON
+blockDump['dataset']={}            # total  (dictionary)   COMMON
+blockDump['acquisition_era']={}    # total  (dictionary)   COMMON
+#blockDump['block']={}              # summary info about files (dictionary)  BLOCK
+#blockDump['file_parent_list']=[]   # summary list of parents lfn (list)   BLOCK
 ###############################################################
 
 ### general flow of script to publish fjrs in dbs3 ###
@@ -72,6 +73,8 @@ blockDump['file_parent_list']=[]   # summary list of parents lfn (list)
 
 doc_list=[]
 fjr_list=[]
+
+doc_fjr_list=[]
 
 ### traslation's dictionaries for DBS3:  key is DBS3 name: value is the fjr tag 
 ### tag in <File>  
@@ -96,7 +99,8 @@ summary_failed_file_name = 'fjr_failed_publication.txt'
 
 
 def read_res_content(path):
-
+  
+  print "in read_res_content path = ", path
   fjr_dir=path
   list_fjr_in_dir = []
   # find fjr files in the crab res dir 
@@ -105,7 +109,7 @@ def read_res_content(path):
       #print "file = ", file 
       if (str.find(file,".xml") != -1):
           list_fjr_in_dir.append(file)
-  #print "list_fjr_in_dir = ", list_fjr_in_dir
+  print "list_fjr_in_dir = ", list_fjr_in_dir
   
   #####################
   # JUST A TEST
@@ -148,6 +152,10 @@ def get_arg():
   ### -f, --fjr specify the complete path of a fjr to publish
   ### -h, --help help of the script
   #############
+  #fjr_dir = ''
+  #srcUrl = ''
+  #dstUrl = ''
+
   arg_fjrs=[]
 
   arg_value_dict={'fjr_dir':'','srcUrl':'', 'dstUrl':''}
@@ -183,7 +191,7 @@ def get_arg():
           print "fjr_dir = ", fjr_dir    
           arg_value_dict['fjr_dir']=fjr_dir
           arg_fjrs=read_res_content(fjr_dir)
-          #print "in get_arg arg_fjrs = ", arg_fjrs
+          print "in get_arg arg_fjrs = ", arg_fjrs
       if o in ("-f", "--fjr"):
           #print "complete file = a = ", a
           fjr_dir = os.path.dirname(a)
@@ -195,11 +203,11 @@ def get_arg():
           #print "arg_fjrs = ", arg_fjrs
 
       if o in ("-s", "--srcUrl"):
-          #print "url of input DBS = ", a        
+          print "url of input DBS = ", a        
           arg_value_dict['srcUrl']= a
 
       if o in ("-d", "--dstUrl"):
-          #print "url of target DBS = ", a        
+          print "url of target DBS = ", a        
           arg_value_dict['dstUrl'] = a
 
       if o in ("-h", "--help"):
@@ -233,7 +241,10 @@ def summary_block_publication(list, path, summary_file_name):
     print "### publication summary file: ", path + summary_file_name
     print "##################################################"
   
-def check_fjr(path, fjr, doc_list, fjr_list):
+#def check_fjr(path, fjr, doc_list, fjr_list):
+def check_fjr(path, fjr, doc_list, fjr_list, doc_fjr_list):
+  #print "##################################################"
+  #print "### checking fjr files: "
   #print "in check_fjr"
   #print  "fjr_list = fjr_list"
 
@@ -262,7 +273,7 @@ def check_fjr(path, fjr, doc_list, fjr_list):
                 exe_exit_status = str(entry.getAttribute("ExitStatus")).strip()
                 #print "exe_exit_status = ", exe_exit_status
             else: 
-                print "other exit_type in fjr", fjr    
+                print "different exit_type in fjr", fjr    
         else:        
             print "no tag FrameworkError found --> skip fjr ", fjr
       
@@ -270,12 +281,15 @@ def check_fjr(path, fjr, doc_list, fjr_list):
             #print "ok exit_codes ok"
             doc_list.append(doc)
             fjr_list.append(fjr)
+            doc_fjr_list.append({'doc':doc,'fjr':fjr})
+
             #print "doc_list = ", doc_list
             #print "fjr_list = ", fjr_list
      #else:
      #    print "exit_codes not zero --> skip fjr ", fjr
 
-  return doc_list, fjr_list
+  #print "##################################################"
+  return doc_list, fjr_list, doc_fjr_list
 
 def create_blockDump_commonpart(doc, blockDump):
 
@@ -329,7 +343,7 @@ def create_blockDump_commonpart(doc, blockDump):
   primds_dictionary={}
   primds_dictionary['primary_ds_name']=FileDatasetsDatasetInfo[translation_DatasetInfo["primary_ds_name"]]
   #print "in primds_dictionary, primds_ds_name = ", primds_dictionary['primary_ds_name']
-
+  
   type = dbs3api_global.listPrimaryDatasets(primary_ds_name=primds_dictionary['primary_ds_name'])
   #print "type = ", type
 
@@ -358,7 +372,10 @@ def create_blockDump_commonpart(doc, blockDump):
   #print dataset_dictionary
 
   blockDump['dataset']=dataset_dictionary
-  #print "blockDump['dataset'] = ", blockDump['dataset']
+  print "################################################"
+  print "in create blockDump commonpart"
+  print "blockDump['dataset'] = ", blockDump['dataset']
+  print "################################################"
 
 
   ### creating acquisition_era_dictionary (this has to be created one time) 
@@ -488,14 +505,19 @@ def create_block_dictionary(doc):
     #print "SEName_value = ", SEName_value
     block_dictionary['origin_site_name']=SEName_value
     return block_dictionary
-    
-def check_and_migrate_block_parents(list):
+
+def check_and_migrate_block_parents(bb):
+    ### input the block of the list   
+    #########
+    #def check_and_migrate_block_parents(list):
     ### the argument list is the blockDump['file_parent_list'], i.e:
     ### blockDump['file_parent_list']=[{'parent_logical_file_name': '/store/user/fiori/D0_To_hh_v1/D0_To_hh_v1/413df7d897fc38d13a2bf8a964566587/D0_To_hh_1721_1_OD8.root', 'logical_file_name': '/store/user/fanzago/D0_To_hh_v1/testFedeDel/f30a6bb13f516198b2814e83414acca1/outfile_3_1_Rth.root'}]
-     
+    
+    list = bb['file_parent_list'] 
     print "--------------------"
     print "in check_and_migrate, list = ", list
     print "--------------------"
+    
     list_parent_lfn = []
     list_parent_block_name=[]
 
@@ -633,23 +655,29 @@ def check_and_migrate_block_parents(list):
         #print "blockDump['primds'] = ", blockDump['primds']
         #print  "blockDump['primds']['primary_ds_type'] = ", blockDump['primds']['primary_ds_type']
 
-        if blockDump['primds']['primary_ds_type'] == 'mc':
+        #if blockDump['primds']['primary_ds_type'] == 'mc':
+        if bb['primds']['primary_ds_type'] == 'mc':
             ##### JUST FOR TEST ##############################################################
             #type={}
             #type[0]={'primary_ds_type':'NEW_TYPE','create_by':'FEDE','creation_date':'NOW'}
             #print "type = ", type
             ##################################################################################
 
-            type = dbs3api_global.listPrimaryDatasets(primary_ds_name=blockDump['primds']['primary_ds_name'])
+            #type = dbs3api_global.listPrimaryDatasets(primary_ds_name=blockDump['primds']['primary_ds_name'])
+            type = dbs3api_global.listPrimaryDatasets(primary_ds_name=bb['primds']['primary_ds_name'])
             if not type or type[0]['primary_ds_type'] == 'mc':
                 print "something was wrong during the migration of block"
                 print "info about primary_ds not updated "
             else:
-                blockDump['primds']['create_by']=type[0]['create_by']
-                blockDump['primds']['primary_ds_type']=type[0]['primary_ds_type']
-                blockDump['primds']['creation_date']=type[0]['creation_date']
+                #blockDump['primds']['create_by']=type[0]['create_by']
+                #blockDump['primds']['primary_ds_type']=type[0]['primary_ds_type']
+                #blockDump['primds']['creation_date']=type[0]['creation_date']
+                bb['primds']['create_by']=type[0]['create_by']
+                bb['primds']['primary_ds_type']=type[0]['primary_ds_type']
+                bb['primds']['creation_date']=type[0]['creation_date']
 
-        print "after migration the blockDump['primds'] = ", blockDump['primds']
+        #print "after migration the blockDump['primds'] = ", blockDump['primds']
+        print "after migration the bb['primds'] = ", bb['primds']
         print "##############################################################################################"
         #######################################
     else:
@@ -669,7 +697,7 @@ if __name__ == "__main__":
     if len(arg_fjr_list)==0:
         exit()
 
-    
+    #exit()
     print "##################################################"
     print "defining DBS instances to use"
     ### local DBS3 where to publish the user dataset
@@ -711,83 +739,186 @@ if __name__ == "__main__":
     print "##################################################"
     
 
+    #exit()
+
+
     # fjr is the name of fjr to publish
     for fjr in arg_fjr_list:
         print "---> fjr = ", fjr 
-        doc_list, fjr_list = check_fjr(fjr_dir, fjr, doc_list, fjr_list)
+        #doc_list, fjr_list = check_fjr(fjr_dir, fjr, doc_list, fjr_list)
+        doc_list, fjr_list, doc_fjr_list = check_fjr(fjr_dir, fjr, doc_list, fjr_list, doc_fjr_list)
 
     ### list of files ok for publication
     print "##################################################"
     print "### fjr ok, they can be published:"
     #print "doc_list = ", doc_list
     print "fjr_list = ", fjr_list
+    
+    
+    
+    ### FEDE new using doc_fjr_list ###
+    print "--- > ####################################################"
+    #print "doc_fjr_list = ", doc_fjr_list
+    #print "len(doc_fjr_list) = ", len(doc_fjr_list)
+    
+    doc_array=[]
+    fjr_array=[]
+    for i in range(len(doc_fjr_list)):
+        #print "i = " , i 
+        doc=doc_fjr_list[i]['doc']
+        fjr=doc_fjr_list[i]['fjr']
+        #print "doc = ", doc
+        #print "fjr = ", fjr
+        #### doc_array is doc_list
+        doc_array.append(doc)
+        #### fjr_array is fjr_list
+        fjr_array.append(fjr)
+    #print "doc_array = ", doc_array    
+    #print "fjr_array = ", fjr_array    
+    print "--- > ####################################################"
+    ############
+    #exit()
 
-    number_of_files=len(doc_list)
+    #number_of_files=len(doc_list)
+    number_of_files=len(doc_fjr_list)
     print "number of fjrs to publish file_count = ", number_of_files
     print "##################################################"
-    if len(doc_list)==0:
+    #if len(doc_list)==0:
+    if len(doc_fjr_list)==0:
       print "exit"
       exit()
 
     #exit()
-    
-    #print "##############################################################"
-    #print "creates common part of block"
-    # creates the common part about dataset of blockDump
-    blockDump = create_blockDump_commonpart(doc_list[0], blockDump)
+
+    ### FEDE creates different blocks if number_of_files > max_number_in_block
+
+    max_number_files_in_block = 500
+    print "max_number_files_in_block = ", max_number_files_in_block
+    count = 0
+    #print "count = ", count
+    ### number of blocks to create
+    blockCount = 0
+
+    if number_of_files > max_number_files_in_block:
+        print "we have to split the files in more blocks"
+
+    ##### common part of blocks 
+    #####
+    #print "###### separating common part ###### "
+    ### dictionary includino only the common parts ###
 
     #print "blockDump = ", blockDump
-    #print "##############################################################"
+    #blockDump = create_blockDump_commonpart(doc_list[0], blockDump)
+    blockDump = create_blockDump_commonpart(doc_array[0], blockDump)
+    #print "blockDump = ", blockDump
 
-    # creates the "file" part of blockDump
-    block_size=0
+    #print "###### separating common part about block ###### "
+   
+    #blockDump_block = {'block':{}} 
+    #print "blockDump_block['block'] = ", blockDump_block['block']
 
-    file_parent_list=[]
-    for doc in doc_list:
-        file_parent_list = create_file_parent_list(doc, file_parent_list)
-        #print "doc = ", doc
-        files_dictionary = create_files_dictionary(doc)
-        #print files_dictionary
-        blockDump['files'].append(files_dictionary)
-        file_conf_list_dictionary = create_file_conf_list_dictionary(blockDump['dataset_conf_list'], files_dictionary['logical_file_name'] )
-        blockDump['file_conf_list'].append(file_conf_list_dictionary)
+    #block_dictionary = create_block_dictionary(doc_array[0])
+    #blockDump_block['block']=block_dictionary
+    #### to add inside the while ####
+    #blockDump_block['block']['block_size']=block_size
+    #blockDump_block['block']['file_count']=number_of_files
 
-        #print "###### TEST SIZE ########"
-        block_size = block_size + int(files_dictionary['file_size'])
+    #print "dopo block_dictionary blockDump_block['block'] = ", blockDump_block['block']
+
+    #blockDump_block['block']['block_name']=blockDump['dataset']['dataset'] + '#' +str(uuid.uuid4())
+    #############################
 
 
-    blockDump['file_parent_list'] = file_parent_list
-    #print 'total_block_size = ', block_size
+    BLOCKDUMP_LIST=[] ### list of blockDumps to insert in DBS
+    FJR_BLOCKDUMP_LIST=[] ### list of fjr_list and blockDumps to insert in DBS
 
-    block_dictionary = create_block_dictionary(doc_list[0])
-    blockDump['block']=block_dictionary
-    blockDump['block']['block_size']=block_size
-    blockDump['block']['file_count']=number_of_files
-    blockDump['block']['block_name']=blockDump['dataset']['dataset'] + '#' +str(uuid.uuid4())
+    while count < number_of_files:
+        
+        #print "### starting while loop ###"
+        ### block part of blockDump dictionary ###
+        blockDump_block = {'block':{}, 'files':[], 'file_conf_list':[], 'file_parent_list':[]}
 
-    print "##################################################"
-    print "### creating blockDump: "
-    print "##################################################"
-    print "blockDump = ", blockDump
-    #print "blockDump['file_parent_list'] = ", blockDump['file_parent_list']
-    #print "blockDump['file_conf_list'] = ", blockDump['file_conf_list']
-    #print "blockDump['dataset_conf_list']= ", blockDump['dataset_conf_list']
+        block_dictionary = create_block_dictionary(doc_array[0])
+        blockDump_block['block']=block_dictionary
+        blockDump_block['block']['block_name']=blockDump['dataset']['dataset'] + '#' +str(uuid.uuid4())
+
+        doc_fjr_to_publish = doc_fjr_list[count:count+max_number_files_in_block]
+        fjr_array_to_publish = fjr_array[count:count+max_number_files_in_block]
+        doc_array_to_publish = doc_array[count:count+max_number_files_in_block]
+
+        number_of_files_in_the_block = len(doc_array_to_publish)
+        #print "number of files to publish in the block = ", number_of_files_in_the_block
+        #print "doc_array_to_publish = ", doc_array_to_publish
+        print "creating block with files_to_publish = ", doc_array_to_publish
+        #print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+        #print "nel while blockDump_block = ", blockDump_block
+        ##### creating part related files ##########
+        block_size=0
+        file_parent_list=[]
+
+        for doc in doc_array_to_publish:
+            file_parent_list = create_file_parent_list(doc, file_parent_list)
+            #print "doc = ", doc
+            files_dictionary = create_files_dictionary(doc)
+            #print files_dictionary
+            blockDump_block['files'].append(files_dictionary)
+            file_conf_list_dictionary = create_file_conf_list_dictionary(blockDump['dataset_conf_list'], files_dictionary['logical_file_name'] )
+            blockDump_block['file_conf_list'].append(file_conf_list_dictionary)
+
+            #print "###### TEST SIZE ########"
+            block_size = block_size + int(files_dictionary['file_size'])
+	
+        blockDump_block['file_parent_list'] = file_parent_list
+        blockDump_block['block']['block_size']=block_size
+        blockDump_block['block']['file_count']=number_of_files_in_the_block
+        count += max_number_files_in_block 
+        blockCount += 1
+	
+	  ### add to the block_part the common one
+        blockDump_block.update(blockDump)
+        ######################
+        #print "\n\n"
+
+        #print "#################################"
+        #print "after update blockDump_block = ", blockDump_block
+        #print "#################################"
+        ##### create a list of blocks #####
+
+        deepcopy_block = copy.deepcopy(blockDump_block)
+        #print "after copy "
+        #print "deep = ", deepcopy_block
+
+        FJR_BLOCKDUMP_LIST.append({'ff': fjr_array_to_publish, 'bb':deepcopy_block})
+        BLOCKDUMP_LIST.append(deepcopy_block)
+
+        #print "blockDump_block = ", blockDump_block
+        #print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$i"
+        #print "\n\n"
+
+    print "total number of blocks = ", blockCount
+    #print "BLOCKDUMP_LIST = ", BLOCKDUMP_LIST
+    print " FJR_BLOCKDUMP_LIST = ",  FJR_BLOCKDUMP_LIST
     
     print "##################################################"
-    print "### checking parents: "
-    print "##################################################"
-    check_and_migrate_block_parents(blockDump['file_parent_list'])
-    print "##################################################"
+    ### loop in blocks ####
+    for entry in FJR_BLOCKDUMP_LIST:
+        bb = entry['bb']
+        #print "bb = ", bb
+        #print "bb['file_parent_list'] = ", bb['file_parent_list']	    
+        print "### checking parents: "
+        print "##################################################"
+        check_and_migrate_block_parents(bb)
+        print "##################################################"
     
-    print "##################################################"
-    print "### starting the publication of user dataset: "
-    print "fjr_dir = ", fjr_dir
-    print "fjr_list = ", fjr_list
-    try:
-        dbs3api_local.insertBulkBlock(blockDump)
-        summary_block_publication(fjr_list, fjr_dir, summary_already_published_file_name) 
-    except HTTPError as http_error:
-        print "http_error = ", http_error
-        summary_block_publication(fjr_list, fjr_dir, summary_failed_file_name) 
+        #print "##################################################"
+        print "### starting the publication of user dataset: "
+
+        #print "fjr_dir = ", fjr_dir
+        #print "fjr_list = ", entry['ff'] 
     
-    print "############################ end ################"
+        try:
+            dbs3api_local.insertBulkBlock(bb)
+            summary_block_publication(entry['ff'], fjr_dir, summary_already_published_file_name) 
+        except HTTPError as http_error:
+            print "http_error = ", http_error
+            summary_block_publication(entry['ff'], fjr_dir, summary_failed_file_name) 
