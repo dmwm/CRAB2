@@ -218,6 +218,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
 
         # Is there anything to do?
         for file in files:
+
             if not file['lfn'] in existingFiles:
                 workToDo = True
                 break
@@ -240,9 +241,8 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         dataset_config = {'dataset': dbsDatasetPath,
                           'processed_ds_name': procName,
                           'data_tier_name': tier,
-                          'dataset_access_type': 'PRODUCTION', # TODO
-                          'physics_group_name': 'CRAB3',
-                          'last_modification_date': int(time.time()),
+                          'dataset_access_type': 'VALID',
+                          'physics_group_name': '',
                           }
         common.logger.debug("About to insert dataset: %s" % str(dataset_config))
 
@@ -301,9 +301,9 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         results[datasetPath]['files'] = len(dbsFiles) - len(failed)
         results[datasetPath]['blocks'] = blockCount
     published = filter(lambda x: x not in failed + publish_next_iteration, published)
-    common.logger.debug("Results of publication step: results = %s" \
-    common.logger.debug("Summary of file publication for this dataset: failed %d, published %d, publish_next_iteration %d\n results %s" \
-                       % (len(failed), len(published), len(publish_next_iteration))
+    common.logger.debug("Results of publication step: results = %s" % results)
+    common.logger.debug("Summary of file publication for this dataset: failed %d, published %d, publish_next_iteration %d" \
+                       % (len(failed), len(published), len(publish_next_iteration)))
     return failed, published, results
 
 
