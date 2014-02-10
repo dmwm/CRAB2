@@ -358,10 +358,11 @@ class Publisher(Actor):
                   good_list.append(fjr)
 
         pubToDBS2 = False
-        pubToDBS3 = True
+        pubToDBS3 = False
         if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
             pubToDBS2 = True
-            pubToDBS3 = False
+        if  self.cfg_params.get('CMSSW.publish_dbs3',None)=="1":
+            pubToDBS3 = True
         if pubToDBS2 :
             status = self.DBS2Publish(good_list)
         elif pubToDBS3:
@@ -380,7 +381,7 @@ class Publisher(Actor):
             else:
                 status='1'
         else:
-            raise CrabException('could not define wether to publish to DBS2 or DBS3')
+            raise CrabException('Could not define wether to publish to DBS2 or DBS3')
 
         return status
 
