@@ -416,8 +416,11 @@ class Publisher(Actor):
             fjr=readJobReport(crabFjr)[0]         # parse into python
             for outFile in fjr.files:             # one fjr may have multiple output LFN's
                 dset_info=outFile.dataset[0]      # better there is only one dataset per file !
-                primds=dset_info['PrimaryDataset']
                 procds=dset_info['ProcessedDataset']
+                primds=dset_info['PrimaryDataset']
+                if primds =='null':
+                    # user MC, get publishdatane stripping username and hash from procds
+                    primds='-'.join(procds.split('-')[1:-1])
                 tier=dset_info['DataTier']
                 outdataset="/%s/%s/%s" % (primds, procds,tier)
                 if not toPublish.has_key(outdataset):
