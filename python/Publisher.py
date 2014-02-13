@@ -358,11 +358,10 @@ class Publisher(Actor):
                   good_list.append(fjr)
 
         pubToDBS2 = False
-        pubToDBS3 = False
+        pubToDBS3 = True
         if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
             pubToDBS2 = True
-        if  self.cfg_params.get('CMSSW.publish_dbs3',None)=="1":
-            pubToDBS3 = True
+            pubToDBS3 = False
         if pubToDBS2 :
             status = self.DBS2Publish(good_list)
         elif pubToDBS3:
@@ -416,8 +415,11 @@ class Publisher(Actor):
             fjr=readJobReport(crabFjr)[0]         # parse into python
             for outFile in fjr.files:             # one fjr may have multiple output LFN's
                 dset_info=outFile.dataset[0]      # better there is only one dataset per file !
-                primds=dset_info['PrimaryDataset']
                 procds=dset_info['ProcessedDataset']
+                primds=dset_info['PrimaryDataset']
+                if primds =='null':
+                    # user MC, get publishdatane stripping username and hash from procds
+                    primds='-'.join(procds.split('-')[1:-1])
                 tier=dset_info['DataTier']
                 outdataset="/%s/%s/%s" % (primds, procds,tier)
                 if not toPublish.has_key(outdataset):
