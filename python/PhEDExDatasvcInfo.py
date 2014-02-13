@@ -116,13 +116,15 @@ class PhEDExDatasvcInfo:
         Return full SE endpoint and related infos
         '''
         self.lfn = self.getLFN()
-        try:
+
+        if int(self.publish_data) == 1 :
+            try:
             # this is not a full LFN, only the path part, add dummy filename for validating format
-            Lexicon.lfn(self.lfn+"dummy.root")
-        except Exception, text:
-            msg = "PhEDExDataSvcInfo.py: ERROR in generated LFN :\n%s" % text
-            raise CrabException(msg)
- 
+                Lexicon.lfn(self.lfn+"dummy.root")
+            except Exception, text:
+                msg = "PhEDExDataSvcInfo.py: ERROR in generated LFN :\n%s" % text
+                raise CrabException(msg)
+
         #extract the PFN for the given node,LFN,protocol
         endpoint = self.getStageoutPFN()
         if ( endpoint[-1] != '/' ) : endpoint = endpoint + '/'
@@ -132,6 +134,7 @@ class PhEDExDatasvcInfo:
         if int(self.publish_data) == 1 or  int(self.usenamespace) == 1:
             self.lfn = self.lfn  + '${PSETHASH}/'
             endpoint = endpoint  + '${PSETHASH}/'
+ 
    
         #extract SE name an SE_PATH (needed for publication)
         SE, SE_PATH, User = self.splitEndpoint(endpoint)
