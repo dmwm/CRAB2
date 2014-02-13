@@ -399,14 +399,15 @@ def create_file_parent_list(doc, list):
 
 
   Inputs = FileTag.getElementsByTagName("Inputs")
-  InputsTag=Inputs[0] 
-  Lfn_tags = InputsTag.getElementsByTagName("LFN")
-  for Lfn_tag in Lfn_tags:
-      for child in Lfn_tag.childNodes:
-          input_lfn = str(child.data).strip()
-          #print "input_lfn = ", input_lfn
-          list.append({'logical_file_name':FileLFN_value,'parent_logical_file_name':input_lfn})
-  #print file_parent_list        
+  if len(Inputs) != 0:
+      InputsTag=Inputs[0] 
+      Lfn_tags = InputsTag.getElementsByTagName("LFN")
+      for Lfn_tag in Lfn_tags:
+          for child in Lfn_tag.childNodes:
+              input_lfn = str(child.data).strip()
+              #print "input_lfn = ", input_lfn
+              list.append({'logical_file_name':FileLFN_value,'parent_logical_file_name':input_lfn})
+      #print file_parent_list 
   return list        
 
 
@@ -704,7 +705,8 @@ if __name__ == "__main__":
     if arg_value_dict['dstUrl']=='':
         ### THE LAST
         #url_local='https://cmsweb-testbed.cern.ch/dbs/int/global/'
-        url_local = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
+        #url_local = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
+        url_local = 'https://cmsweb.cern.ch/dbs/prod/phys03/'
     else:
         url_local = arg_value_dict['dstUrl']
         if url_local[-1] != '/':
@@ -836,7 +838,9 @@ if __name__ == "__main__":
         
         #print "### starting while loop ###"
         ### block part of blockDump dictionary ###
-        blockDump_block = {'block':{}, 'files':[], 'file_conf_list':[], 'file_parent_list':[]}
+        ### FEDE 13 2
+        #blockDump_block = {'block':{}, 'files':[], 'file_conf_list':[], 'file_parent_list':[]}
+        blockDump_block = {'block':{}, 'files':[], 'file_conf_list':[]}
 
         block_dictionary = create_block_dictionary(doc_array[0])
         blockDump_block['block']=block_dictionary
@@ -867,8 +871,9 @@ if __name__ == "__main__":
 
             #print "###### TEST SIZE ########"
             block_size = block_size + int(files_dictionary['file_size'])
-	
-        blockDump_block['file_parent_list'] = file_parent_list
+        
+        if len(file_parent_list) != 0 :
+            blockDump_block['file_parent_list'] = file_parent_list
         blockDump_block['block']['block_size']=block_size
         blockDump_block['block']['file_count']=number_of_files_in_the_block
         count += max_number_files_in_block 
@@ -907,7 +912,10 @@ if __name__ == "__main__":
         #print "bb['file_parent_list'] = ", bb['file_parent_list']	    
         print "### checking parents: "
         print "##################################################"
-        check_and_migrate_block_parents(bb)
+        if bb.has_key('file_parent_list'):    
+            check_and_migrate_block_parents(bb)
+        else:
+            print "your dataset has not parents"
         print "##################################################"
     
         #print "##################################################"
