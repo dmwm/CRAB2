@@ -75,12 +75,12 @@ def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         # The dataset exists in the destination; make sure source and destination
         # have the same blocks.
         existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
-        proxy = os.environ.get("SOCKS5_PROXY")
+        #proxy = os.environ.get("SOCKS5_PROXY")
         source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
         blocks_to_migrate = source_blocks - existing_blocks
         common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
         if blocks_to_migrate:
-            common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(existing_blocks), ", ".join(existing_blocks), inputDataset) )
+            common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(blocks_to_migrate), ", ".join(blocks_to_migrate), inputDataset) )
             should_migrate = True
         else:
             common.logger.info("No migration needed")
@@ -137,25 +137,25 @@ def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
 
 def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     # Submit one migration request for each block that needs migrating
-    existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
-    should_migrate = False
-    if not existing_datasets or (existing_datasets[0]['dataset'] != inputDataset):
-        should_migrate = True
-        common.logger.info("Dataset %s must be migrated; not in the destination DBS." % inputDataset)
-    if not should_migrate:
+    # existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
+    #should_migrate = False
+    #if not existing_datasets or (existing_datasets[0]['dataset'] != inputDataset):
+    #    should_migrate = True
+    #    common.logger.info("Dataset %s must be migrated; not in the destination DBS." % inputDataset)
+    #if not should_migrate:
         # The dataset exists in the destination; make sure source and destination
         # have the same blocks.
-        existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
-        existing_blocks=set([])
+    existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
         #proxy = os.environ.get("SOCKS5_PROXY")
-        source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
-        blocks_to_migrate = source_blocks - existing_blocks
-        common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
-        if blocks_to_migrate:
-            common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(existing_blocks), ", ".join(existing_blocks), inputDataset) )
-            should_migrate = True
-        else:
-            common.logger.info("No migration needed")
+    source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
+    blocks_to_migrate = source_blocks - existing_blocks
+    common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
+    if blocks_to_migrate:
+        common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(blocks_to_migrate), ", ".join(blocks_to_migrate), inputDataset) )
+        should_migrate = True
+    else:
+        common.logger.info("No migration needed")
+        should_migrate = False
     if should_migrate:
         sourceURL = sourceApi.url
         migrationIds=[]
@@ -208,14 +208,14 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
                 common.logger.debug("Migration status for id %s: %s" % (id,state))
                 if state == 2:
                     migrationIds.remove(id)
-                    succesfulMigration += 1
+                    okMigrations += 1
                 if state ==3:
                     common.logger.info("Migration %d has failed. Full status: %s" % (id, str(status)))
                     migrationIds.remove(id)
                     failedMigrations += 1
                 if state == 0 or state == 1:
                     pass
-                wait=max(wait*2,30)  # give it more time, but check every 30 sec at least
+            wait=min(wait*2,30)  # give it more time, but check every 30 sec at least
 
         common.logger.info("Migration of %s is complete." % inputDataset)
         msg="blocks to migrate: %d. Success %d. Fail %d." % (todoMigrations, okMigrations, failMigrations)
@@ -227,7 +227,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         else:
             common.logger.info("Migration was succesful")
         
-        existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
+    existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
 
     return existing_datasets
 
