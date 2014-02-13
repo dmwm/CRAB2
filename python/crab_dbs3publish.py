@@ -64,76 +64,6 @@ def createBulkBlock(output_config, processing_era_config, primds_config, dataset
     return blockDump
 
 
-def migrateDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
-    # Submit migration
-    existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
-    should_migrate = False
-    if not existing_datasets or (existing_datasets[0]['dataset'] != inputDataset):
-        should_migrate = True
-        common.logger.info("Dataset %s must be migrated; not in the destination DBS." % inputDataset)
-    if not should_migrate:
-        # The dataset exists in the destination; make sure source and destination
-        # have the same blocks.
-        existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
-        #proxy = os.environ.get("SOCKS5_PROXY")
-        source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
-        blocks_to_migrate = source_blocks - existing_blocks
-        common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
-        if blocks_to_migrate:
-            common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(blocks_to_migrate), ", ".join(blocks_to_migrate), inputDataset) )
-            should_migrate = True
-        else:
-            common.logger.info("No migration needed")
-    if should_migrate:
-        sourceURL = sourceApi.url
-        
-        data = {'migration_url': sourceURL, 'migration_input': inputDataset}
-        common.logger.debug("About to submit migrate request for %s" % str(data))
-        try:
-            result = migrateApi.submitMigration(data)
-        except HTTPError, he:
-            if he.msg.find("Requested dataset %s is already in destination" % inputDataset) >= 0:
-                common.logger.info("Migration API believes this dataset has already been migrated.")
-                return destReadApi.listDatasets(dataset=inputDataset, detail=True)
-            common.logger.info("ERROR: Request to migrate %s failed." % inputDataset)
-            return []
-        common.logger.debug("Result of migration request %s" % str(result))
-        id = result.get("migration_details", {}).get("migration_request_id")
-        if id == None:
-            common.logger.info("ERROR: Migration request failed to submit.")
-            common.logger.info("ERROR: Migration request results: %s" % str(result))
-            return []
-        common.logger.debug("Migration ID: %s" % id)
-        time.sleep(1)
-        # Wait forever, then return to the main loop. Note we don't
-        # fail or cancel anything. Just retry later if users Ctl-C crab
-        # States:
-        # 0=PENDING
-        # 1=IN PROGRESS
-        # 2=COMPLETED
-        # 3=FAILED
-        state=0
-        wait=1
-        while state==0 or state==1:
-            common.logger.debug("About to get migration request for %s." % id)
-            status = migrateApi.statusMigration(migration_rqst_id=id)
-            state = status[0].get("migration_status")
-            common.logger.debug("Migration status: %s" % state)
-            if state == 0 or state == 1:
-                time.sleep(wait)
-                wait=max(wait*2,30)  # give it more time, but check every 30 sec at least
-
-        if state == 0 or state == 1:
-            common.logger.info("Migration of %s has taken too long - will delay publication." % inputDataset)
-            return []
-        if state == 3:
-            common.logger.info("Migration of %s has failed. Full status: %s" % (inputDataset, str(status)))
-            return []
-        common.logger.info("Migration of %s is complete." % inputDataset)
-        existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
-
-    return existing_datasets
-
 
 def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     # Submit one migration request for each block that needs migrating
@@ -204,7 +134,12 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
             time.sleep(wait)
             for id in migrationIds:
                 status = migrateApi.statusMigration(migration_rqst_id=id)
-                state = status[0].get("migration_status")
+                try:
+                    state = status[0].get("migration_status")
+                except:
+                    msg="Can't get status for mitration_id %d. Waiting" % id
+                    common.logger.info(msg)
+                    continue
                 common.logger.debug("Migration status for id %s: %s" % (id,state))
                 if state == 2:
                     migrationIds.remove(id)
