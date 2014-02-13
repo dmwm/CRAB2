@@ -15,9 +15,6 @@ from crab_util import *
 from crab_exceptions import *
 from RestClient.ErrorHandling.RestClientExceptions import HTTPError
 
-#from dbs.apis.dbsClient import *
-
-
 def format_file_3(file):
 
     nf = {'logical_file_name': file['lfn'],
@@ -67,16 +64,10 @@ def createBulkBlock(output_config, processing_era_config, primds_config, dataset
 
 def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     # Submit one migration request for each block that needs migrating
-    # existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
-    #should_migrate = False
-    #if not existing_datasets or (existing_datasets[0]['dataset'] != inputDataset):
-    #    should_migrate = True
-    #    common.logger.info("Dataset %s must be migrated; not in the destination DBS." % inputDataset)
-    #if not should_migrate:
-        # The dataset exists in the destination; make sure source and destination
-        # have the same blocks.
+
+    # If the dataset exists in the destination; make sure source and destination
+    # have the same blocks.
     existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
-        #proxy = os.environ.get("SOCKS5_PROXY")
     source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
     blocks_to_migrate = source_blocks - existing_blocks
     common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
@@ -114,9 +105,9 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
             migrationIds.append(id)
         msg="%d block migration requests submitted" % todoMigrations
         common.logger.info(msg)
-        #time.sleep(1)
+
         # Wait forever, then return to the main loop. Note we don't
-        # fail or cancel anything. Just retry later if users Ctl-C crab
+        # fail or cancel anything. Just retry later if users Ctl-C's crab
         # States:
         # 0=PENDING
         # 1=IN PROGRESS
@@ -209,7 +200,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         appName = 'cmsRun'
         appVer = files[0]["swversion"]
         appFam = 'output'
-        # TODO: this is invalid:
+
         pset_hash = files[0]['publishname'].split("-")[-1]
         gtag = str(files[0]['globaltag'])
         if gtag == "None":
@@ -219,11 +210,6 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
             acquisitionera = acquisition_era_name
             
         empty, primName, procName, tier = dbsDatasetPath.split('/')
-        #SB dataset names is alredy done properly in Crab2
-        # ans DBS3 now accept Crab2 style naming
-        #procName = "_".join(procName.split("-")[:2]) + "-" + "-".join(procName.split("-")[2:])
-        #procName = "%s-%s-v%d" % (acquisition_era_name, procName, processing_era_config['processing_version'])
-        #dbsDatasetPath = "/".join([empty, primName, procName, tier])
 
         primds_config = {'primary_ds_name': primName, 'primary_ds_type': primary_ds_type}
         common.logger.debug("About to insert primary dataset: %s" % str(primds_config))
