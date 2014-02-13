@@ -56,7 +56,8 @@ class Publisher(Actor):
         #    raise CrabException(msg)
 
         self.DBSURL=cfg_params.get('USER.dbs_url_for_publication','DBS3/phys03')
-        common.logger.info('<dbs_url_for_publication> = '+self.DBSURL)
+        common.logger.info('your dataset will be published in DBS3/prod/phys03')
+        #common.logger.info('<dbs_url_for_publication> = '+self.DBSURL)
         if (self.DBSURL == "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet") or (self.DBSURL == "https://cmsdbsprod.cern.ch:8443/cms_dbs_prod_global_writer/servlet/DBSServlet"):
             msg = "You can not publish your data in the globalDBS = " + self.DBSURL + "\n" 
             msg = msg + "Please write your local one in the [USER] section 'dbs_url_for_publication'"
