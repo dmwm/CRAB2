@@ -358,11 +358,10 @@ class Publisher(Actor):
                   good_list.append(fjr)
 
         pubToDBS2 = False
-        pubToDBS3 = False
+        pubToDBS3 = True
         if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
             pubToDBS2 = True
-        if  self.cfg_params.get('CMSSW.publish_dbs3',None)=="1":
-            pubToDBS3 = True
+            pubToDBS3 = False
         if pubToDBS2 :
             status = self.DBS2Publish(good_list)
         elif pubToDBS3:
