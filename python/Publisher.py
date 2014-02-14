@@ -56,7 +56,6 @@ class Publisher(Actor):
         #    raise CrabException(msg)
 
         self.DBSURL=cfg_params.get('USER.dbs_url_for_publication','DBS3/phys03')
-        common.logger.info('your dataset will be published in DBS3/prod/phys03')
         #common.logger.info('<dbs_url_for_publication> = '+self.DBSURL)
         if (self.DBSURL == "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet") or (self.DBSURL == "https://cmsdbsprod.cern.ch:8443/cms_dbs_prod_global_writer/servlet/DBSServlet"):
             msg = "You can not publish your data in the globalDBS = " + self.DBSURL + "\n" 
@@ -394,9 +393,16 @@ class Publisher(Actor):
 
         (isDbs2, isDbs3, dbs2_url, dbs3_url) =  verify_dbs_url(self)
         sourceUrl = dbs3_url
-        destUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSWriter'
-        destReadUrl  = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader'
-        migrateUrl = 'https://cmsweb.cern.ch/dbs/prod/phys03/DBSMigrate'
+        prdDBSurl = 'https://cmsweb.cern.ch/dbs/prod/phys03/'
+        intDBSurl = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
+        devDBSurl = 'https://dbs3-dev01.cern.ch/dbs/dev/phys03/'
+        destDBSurl = prdDBSurl
+
+        common.logger.info('your dataset will be published in %s' % destDBSurl)
+
+        destUrl = destDBSurl + 'DBSWriter'
+        destReadUrl  = destDBSurl + 'DBSReader'
+        migrateUrl = destDBSurl + 'DBSMigrate'
         inputDataset = self.cfg_params.get('CMSSW.datasetpath','None')
 
         sourceApi = Dbs3Api(url=sourceUrl)
