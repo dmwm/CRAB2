@@ -114,7 +114,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         # 2=SUCCESS
         # 3=FAILED
 
-        failMigrations=0
+        failedMigrations=0
         okMigrations=0
         wait=1
         while len(migrationIds) > 0:
@@ -144,9 +144,9 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
             wait=min(wait*2,30)  # give it more time, but check every 30 sec at least
 
         common.logger.info("Migration of %s is complete." % inputDataset)
-        msg="blocks to migrate: %d. Success %d. Fail %d." % (todoMigrations, okMigrations, failMigrations)
+        msg="blocks to migrate: %d. Success %d. Fail %d." % (todoMigrations, okMigrations, failedMigrations)
         common.logger.info(msg)
-        if failMigrations > 0:
+        if failedMigrations > 0:
             msg="some blocks failed to migrate, try again later after problem is resolved"
             common.logger.info(msg)
             return []
