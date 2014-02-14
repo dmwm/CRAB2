@@ -72,7 +72,8 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     blocks_to_migrate = source_blocks - existing_blocks
     common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
     if blocks_to_migrate:
-        common.logger.info("%d blocks (%s) must be migrated to destination dataset %s." % (len(blocks_to_migrate), ", ".join(blocks_to_migrate), inputDataset) )
+        common.logger.info("%d blocks must be migrated to destination dataset %s." % (len(blocks_to_migrate), inputDataset) )
+        common.logger.debug("list of blocks to migrate:\n%s." % ", ".join(blocks_to_migrate) )
         should_migrate = True
     else:
         common.logger.info("No migration needed")
@@ -83,7 +84,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         todoMigrations=len(blocks_to_migrate)
         for block in blocks_to_migrate:
             data = {'migration_url': sourceURL, 'migration_input': block}
-            common.logger.info("Submit migrate request for %s ..." % block)
+            common.logger.debug("Submit migrate request for %s ..." % block)
             try:
                 result = migrateApi.submitMigration(data)
             except HTTPError, he:
@@ -103,7 +104,9 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
                 common.logger.info("ERROR: Migration request results: %s" % str(result))
                 return []
             migrationIds.append(id)
-        msg="%d block migration requests submitted" % todoMigrations
+        msg="%d block migration requests submitted. Now wait for completion." % todoMigrations
+        common.logger.info(msg)
+        msg = " List of migration requests: %s" % migrationIds
         common.logger.info(msg)
 
         # Wait forever, then return to the main loop. Note we don't
@@ -112,36 +115,46 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         # 0=PENDING
         # 1=IN PROGRESS
         # 2=SUCCESS
-        # 3=FAILED
+        # 3=FAILED (failed migrations are retried up to 3 times automatically)
+        # 
 
         failedMigrations=0
         okMigrations=0
         wait=1
         while len(migrationIds) > 0:
             if wait > 1:
-                msg="Migration in progress. Next check in %d sec. " % wait
-                msg+="You can Ctl_C at any time and redo crab -publish later"
+                msg=" %d Block migrations in progress. Next check in %d sec. " % (len(migrationIds), wait)
+                if wait > 10:
+                    msg+="\n     You can Ctl-C out at any time and re-issue crab -publish later,"
+                    msg+="\n     migrations will continue in background"
                 common.logger.info(msg)
             time.sleep(wait)
-            for id in migrationIds:
+            idToCheck=migrationIds[:]  # copy, not reference
+            for id in idToCheck:
                 status = migrateApi.statusMigration(migration_rqst_id=id)
                 try:
                     state = status[0].get("migration_status")
+                    retry_count = status[0].get("retry_count")
                 except:
                     msg="Can't get status for mitration_id %d. Waiting" % id
                     common.logger.info(msg)
                     continue
-                common.logger.debug("Migration status for id %s: %s" % (id,state))
+                #common.logger.debug("Migration status for id %s: %s" % (id,state))
                 if state == 2:
+                    common.logger.info("Migration id %d has succeeded" % id)
                     migrationIds.remove(id)
                     okMigrations += 1
                 if state ==3:
-                    common.logger.info("Migration %d has failed. Full status: %s" % (id, str(status)))
-                    migrationIds.remove(id)
-                    failedMigrations += 1
+                    if retry_count == 3:
+                        common.logger.info("Migration id %d has failed" % id)
+                        common.logger.debug("Full status for migration id %d:\n%s" % (id, str(status)))
+                        migrationIds.remove(id)
+                        failedMigrations += 1
+                    else:
+                        pass
                 if state == 0 or state == 1:
                     pass
-            wait=min(wait*2,30)  # give it more time, but check every 30 sec at least
+            wait=min(wait*2,120)  # give it more time, but check every 2 minutes at least
 
         common.logger.info("Migration of %s is complete." % inputDataset)
         msg="blocks to migrate: %d. Success %d. Fail %d." % (todoMigrations, okMigrations, failedMigrations)
@@ -237,7 +250,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                 workToDo = True
                 break
         if not workToDo:
-            common.logger.info("Nothing uploaded, %s has these files already or not enough files" % datasetPath)
+            common.logger.info("Nothing uploaded, %s has these files already or not enough new files" % datasetPath)
             for file in files:
                 published.append(file['lfn'])
             continue
@@ -318,8 +331,8 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         results[datasetPath]['blocks'] = blockCount
     published = filter(lambda x: x not in failed + publish_next_iteration, published)
     common.logger.debug("Results of publication step: results = %s" % results)
-    common.logger.info("Summary of file publication for this dataset: failed %d, published %d, publish_next_iteration %d" \
-                       % (len(failed), len(published), len(publish_next_iteration)))
+    common.logger.info("Summary of file publication :  published %d, failed %d, still_to_publish %d" \
+                       % (len(published), len(failed), len(publish_next_iteration)))
     return failed, published, results
 
 
