@@ -396,7 +396,7 @@ class Publisher(Actor):
         prdDBSurl = 'https://cmsweb.cern.ch/dbs/prod/phys03/'
         intDBSurl = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
         devDBSurl = 'https://dbs3-dev01.cern.ch/dbs/dev/phys03/'
-        destDBSurl = devDBSurl
+        destDBSurl = prdDBSurl
 
         common.logger.info('your dataset will be published in %s' % destDBSurl)
 
