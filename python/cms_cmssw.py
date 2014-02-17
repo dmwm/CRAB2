@@ -1248,7 +1248,7 @@ class Cmssw(JobType):
 
         downloader = Downloader(url)
         goodRelease = False
-        tagCollectorUrl = url + fileName
+        tagCollectorUrl = url + '/' + fileName
 
         try:
             result = downloader.config(fileName)
