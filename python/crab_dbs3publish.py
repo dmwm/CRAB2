@@ -72,7 +72,8 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     blocks_to_migrate = source_blocks - existing_blocks
     common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
     if blocks_to_migrate:
-        common.logger.info("%d blocks must be migrated to destination dataset %s." % (len(blocks_to_migrate), inputDataset) )
+        nMigReq=len(blocks_to_migrate)
+        common.logger.info("%d blocks must be migrated to destination dataset %s." % (nMigReq, inputDataset) )
         common.logger.debug("list of blocks to migrate:\n%s." % ", ".join(blocks_to_migrate) )
         should_migrate = True
     else:
@@ -81,7 +82,9 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     if should_migrate:
         sourceURL = sourceApi.url
         migrationIds=[]
-        todoMigrations=len(blocks_to_migrate)
+        todoMigrations=nMigReq
+        msg="Submitting %d block migration requests to DBS3..." % nMigReq
+        common.logger.info(msg)
         for block in blocks_to_migrate:
             data = {'migration_url': sourceURL, 'migration_input': block}
             common.logger.debug("Submit migrate request for %s ..." % block)
@@ -103,6 +106,10 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
                 common.logger.info("ERROR: Migration request failed to submit.")
                 common.logger.info("ERROR: Migration request results: %s" % str(result))
                 return []
+            if result.get("migration_report") == 'REQUEST ALREADY QUEUED':
+                msg = "ERROR: Migration %d : REQUEST ALREADY QUEUED." % id
+                msg += " Do crab -uploadLog and contact support"
+                raise CrabException(msg)
             migrationIds.append(id)
         msg="%d block migration requests submitted. Now wait for completion." % todoMigrations
         common.logger.info(msg)
@@ -120,7 +127,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
 
         failedMigrations=0
         okMigrations=0
-        wait=1
+        wait=10
         while len(migrationIds) > 0:
             if wait > 1:
                 msg=" %d Block migrations in progress. Next check in %d sec. " % (len(migrationIds), wait)
@@ -136,10 +143,9 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
                     state = status[0].get("migration_status")
                     retry_count = status[0].get("retry_count")
                 except:
-                    msg="Can't get status for mitration_id %d. Waiting" % id
-                    common.logger.info(msg)
-                    continue
-                #common.logger.debug("Migration status for id %s: %s" % (id,state))
+                    msg="ERROR: Can't get status for migration_id %d. Do crab -uploadLog and contact support" % id
+                    raise CrabException(msg)
+
                 if state == 2:
                     common.logger.info("Migration id %d has succeeded" % id)
                     migrationIds.remove(id)
@@ -154,7 +160,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
                         pass
                 if state == 0 or state == 1:
                     pass
-            wait=min(wait*2,120)  # give it more time, but check every 2 minutes at least
+            wait=min(wait+20,120)  # give it more time, but check every 2 minutes at least
 
         common.logger.info("Migration of %s is complete." % inputDataset)
         msg="blocks to migrate: %d. Success %d. Fail %d." % (todoMigrations, okMigrations, failedMigrations)
