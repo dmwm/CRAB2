@@ -514,9 +514,9 @@ def gethnUserNameFromSiteDB():
     params = { 'cacheduration' : 24,
                'logger' : common.logger() }
     mySiteDB = SiteDBJSON(params)
-    msg_ = "there is no user name associated to DN %s in SiteDB.\n" % userdn
-    msg_ += "You need to register in SiteDB with the instructions at https://twiki.cern.ch/twiki/bin/view/CMS/SiteDBForCRAB"
-    
+    msg = "Error extracting user name from SiteDB: %s\n" % text
+    msg += " Issue crab -cleanCache and try again.\n If problem persists"
+    msg += " check that you are registered in SiteDB, see https://twiki.cern.ch/twiki/bin/view/CMS/SiteDBForCRAB\n"
     try:
         hnUserName = mySiteDB.dnUserName(dn=userdn)
         # cast to a string, for odd reasons new
@@ -526,12 +526,8 @@ def gethnUserNameFromSiteDB():
         # code e.g. in crab -uploadLog
         hnUserName = str(hnUserName)
     except Exception, text:
-        msg = "Error extracting user name from SiteDB: %s\n" % text
-        msg += " Check that you are registered in SiteDB, see https://twiki.cern.ch/twiki/bin/view/CMS/SiteDBForCRAB\n"
-        msg += ' or %s' % msg_
         raise CrabException(msg)
     if not hnUserName:
-        msg = "Error. %s" % msg_
         raise CrabException(msg)
     return hnUserName
 

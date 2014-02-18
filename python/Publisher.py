@@ -357,6 +357,11 @@ class Publisher(Actor):
                if reports[0].status == "Success":
                   good_list.append(fjr)
 
+        if len(good_list) == 0:
+            common.logger.info("No fjr with exit code =0 to be published")
+            status = '0'
+            return status
+
         pubToDBS2 = False
         pubToDBS3 = True
         if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
@@ -397,6 +402,12 @@ class Publisher(Actor):
         intDBSurl = 'https://cmsweb-testbed.cern.ch/dbs/int/phys03/'
         devDBSurl = 'https://dbs3-dev01.cern.ch/dbs/dev/phys03/'
         destDBSurl = prdDBSurl
+
+        if  self.cfg_params.get('CMSSW.dbs3-int',None)=="1":
+            destDBSurl = intDBSurl
+            
+        if  self.cfg_params.get('CMSSW.dbs3-dev',None)=="1":
+            destDBSurl = devDBSurl
 
         common.logger.info('your dataset will be published in %s' % destDBSurl)
 
