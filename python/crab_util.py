@@ -514,9 +514,11 @@ def gethnUserNameFromSiteDB():
     params = { 'cacheduration' : 24,
                'logger' : common.logger() }
     mySiteDB = SiteDBJSON(params)
-    msg = "Error extracting user name from SiteDB: %s\n" % text
+    msg = "Error extracting user name from SiteDB:\n"
     msg += " Issue crab -cleanCache and try again.\n If problem persists"
     msg += " check that you are registered in SiteDB, see https://twiki.cern.ch/twiki/bin/view/CMS/SiteDBForCRAB\n"
+    msg += " and follow the diagnostics steps indicated there at"
+    msg += " https://twiki.cern.ch/twiki/bin/viewauth/CMS/SiteDBForCRAB#Check_username_extraction_from_s"
     try:
         hnUserName = mySiteDB.dnUserName(dn=userdn)
         # cast to a string, for odd reasons new
