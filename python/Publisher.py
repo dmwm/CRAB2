@@ -357,6 +357,11 @@ class Publisher(Actor):
                if reports[0].status == "Success":
                   good_list.append(fjr)
 
+        if len(good_list) == 0:
+            common.logger.info("No fjr with exit code =0 to be published")
+            status = '0'
+            return status
+
         pubToDBS2 = False
         pubToDBS3 = True
         if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
