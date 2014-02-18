@@ -398,6 +398,12 @@ class Publisher(Actor):
         devDBSurl = 'https://dbs3-dev01.cern.ch/dbs/dev/phys03/'
         destDBSurl = prdDBSurl
 
+        if  self.cfg_params.get('CMSSW.dbs3-int',None)=="1":
+            destDBSurl = intDBSurl
+            
+        if  self.cfg_params.get('CMSSW.dbs3-dev',None)=="1":
+            destDBSurl = devDBSurl
+
         common.logger.info('your dataset will be published in %s' % destDBSurl)
 
         destUrl = destDBSurl + 'DBSWriter'
