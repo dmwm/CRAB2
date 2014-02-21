@@ -438,6 +438,11 @@ class Publisher(Actor):
                 if primds =='null':
                     # user MC, get publishdatane stripping username and hash from procds
                     primds='-'.join(procds.split('-')[1:-1])
+                # SB TEMPORARY PATCH FOR PELIN
+                import re
+                if re.compile('[0-9]').match(primds[0]) : # starts with a number
+                    primds = 'p'+primds                   # make it start with a letter
+                # SB END TEMPORARY PATCH
                 tier=dset_info['DataTier']
                 outdataset="/%s/%s/%s" % (primds, procds,tier)
                 if not toPublish.has_key(outdataset):
