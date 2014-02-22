@@ -16,6 +16,7 @@ DBSAPItag="DBS_2_0_9_patch_9"
 DLSAPItag="DLS_1_1_3"
 PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_60"
 WMCOREtag="WMCORE_CRAB2_3"
+WMCOREWMtag="0.9.93pre1"
 DBS3tag="DBS_3_1_9c"
 
 
@@ -31,14 +32,6 @@ chmod -x python/crab.py
 rm python/crab.*sh
 mv python/configure .
 rm -rf .git
-
-# SB -- this is likely not needed
-## create etc subdir for admin config file
-#mkdir -p etc
-## create basic config file
-#cat > etc/crab.cfg <<EOF
-#EOF
-#SB ----------------------------------
 
 ## put externals where Crab2 is used to find them
 mv externals external
@@ -89,6 +82,16 @@ mkdir dbs3client
 mv DBS3/PycurlClient/src/python/* ./dbs3client/
 mv DBS3/Client/src/python/* ./dbs3client/
 rm -rf DBS3
+
+#
+# download DBS Lexicon from recent WMCore version 
+#
+
+git clone -b ${WMCOREWMtag} https://github.com/dmwm/WMCore.git WMCore-current
+
+mkdir WMCoreWM
+mv WMCore-current/src/python/WMCore/Lexicon.py ./WMCoreWM/
+rm -rf WMCore-current
 
 ## exit from external
 cd ../..
