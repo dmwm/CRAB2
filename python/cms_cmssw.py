@@ -231,7 +231,16 @@ class Cmssw(JobType):
                     Lexicon.publishdatasetname(self.processedDataset)
                 except Exception, text:
                     msg = "ERROR in publish_data_name :\n%s" % text
+                    msg += "\n so can't be used in Processed Dataset name"
                     raise CrabException(msg)
+                if self.primaryDataset == 'null':
+                    # user generated MC, will use publish_data_name for primary
+                    try:
+                        Lexicon.primdataset(self.processedDataset)
+                    except Exception, text:
+                        msg = "ERROR in publish_data_name :\n%s" % text
+                        msg += "\n so can't be used as Primary Dataset name"
+                        raise CrabException(msg)
 
         self.conf = {}
         self.conf['pubdata'] = None
