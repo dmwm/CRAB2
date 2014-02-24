@@ -853,7 +853,7 @@ def verify_dbs_url(self) :
     caf_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_caf_analysis_01/servlet/DBSServlet"
     local_dbs2_01 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_01/servlet/DBSServlet"
     local_dbs2_02 = "http://cmsdbsprod.cern.ch/cms_dbs_ph_analysis_02/servlet/DBSServlet"
-    caf_dbs3_01   = "https://cmsweb.cern.ch/dbs/prod/caf01/DBSReader"
+    caf_dbs3_01   = "https://cmsweb.cern.ch/dbs/prod/caf/DBSReader"
     local_dbs3_01 = "https://cmsweb.cern.ch/dbs/prod/phys01/DBSReader"
     local_dbs3_02 = "https://cmsweb.cern.ch/dbs/prod/phys02/DBSReader"
     local_dbs3_03 = "https://cmsweb.cern.ch/dbs/prod/phys03/DBSReader"
