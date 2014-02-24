@@ -861,7 +861,7 @@ def verify_dbs_url(self) :
         global_dbs2, caf_dbs2_01, local_dbs2_01, local_dbs2_02,
         ]
     known_dbs3_urls = [ \
-        global_dbs3, caf_dbs3_01, local_dbs3_01, local_dbs2_01, local_dbs3_03,
+        global_dbs3, caf_dbs3_01, local_dbs3_01, local_dbs3_02, local_dbs3_03,
         ]
     known_dbs_urls = known_dbs2_urls + known_dbs3_urls
 
