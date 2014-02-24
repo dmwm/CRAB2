@@ -28,6 +28,9 @@ cd -P /afs/cern.ch/cms/ccs/wm/scripts/Crab
 tar xf ${rel}.tgz
 cd ${rel}
 ./configure
+cd ..
+ln -sf ${rel}/crab.sh ./crab_new.sh
+ln -sf ${rel}/crab.csh ./crab_new.csh
 
 cd /afs/cern.ch/cms/ccs/wm/www/Crab/Docs
 ln -sfv ../../../scripts/Crab/${rel}.tgz .
