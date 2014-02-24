@@ -121,6 +121,9 @@ export PYTHONPATH=\${EXTERNALDIR}/py2-sqlalchemy/0.5.2-cmp7/lib/python2.6/site-p
 # dbs3
 export PYTHONPATH=\${PYTHONPATH}:\${EXTERNALDIR}/dbs3client
 
+# Lexicon
+export PYTHONPATH=\${PYTHONPATH}:\${EXTERNALDIR}/WMCoreWM
+
 EOF
 
 # csh style
@@ -195,6 +198,9 @@ setenv PYTHONPATH \${EXTERNALDIR}/py2-sqlalchemy/0.5.2-cmp7/lib/python2.6/site-p
 
 # dbs3
 setenv PYTHONPATH \${PYTHONPATH}:\${EXTERNALDIR}/dbs3client
+
+# Lexicon
+setenv PYTHONPATH \${PYTHONPATH}:\${EXTERNALDIR}/WMCoreWM
 
 EOF
 return
