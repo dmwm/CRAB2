@@ -330,10 +330,10 @@ class DataDiscovery:
                 else:
                     files = api.listDatasetFiles(self.datasetPath)
 
-        except DbsBadRequest, msg:
-            raise CrabException(msg)
-        except DBSError, msg:
-            raise CrabException(msg)
+        except DbsBadRequest, e:
+            raise CrabException(str(e))
+        except DBSError, e:
+            raise CrabException(str(e))
 
         
         return files
