@@ -60,6 +60,49 @@ def createBulkBlock(output_config, processing_era_config, primds_config, dataset
     blockDump['block']['block_size'] = sum([int(file[u'file_size']) for file in files])
     return blockDump
 
+def requestBlockMigration(migrateApi, sourceApi, block):
+    # submit migration request for one block checking output
+    
+    atDestination = False
+    id = None
+    
+    common.logger.debug("Submit migrate request for %s ..." % block)
+    sourceURL = sourceApi.url
+    data = {'migration_url': sourceURL, 'migration_input': block}
+    try:
+        result = migrateApi.submitMigration(data)
+    except HTTPError, he:
+        if "is already at destination" in he.msg:
+            common.logger.info("...block is already at destination")
+            atDestination = True
+            return (atDestination, id)
+        else:
+            common.logger.info("ERROR: Request to migrate %s failed." % block)
+            common.logger.info("ERROR: Request detail: %s" % data)
+            common.logger.info("DBS3 EXCEPTION %s\n" % he.msg)
+            
+    common.logger.debug("Result of migration request %s" % str(result))
+    id = result.get("migration_details", {}).get("migration_request_id")
+    report = result.get("migration_report")
+    if id == None:
+        msg =   "ERROR: Migration request failed to submit."
+        msg +="\nERROR: Migration request results: %s" % str(result)
+        raise CrabException(msg)
+    if 'REQUEST ALREADY QUEUED' in report:
+        # request could be queued in another thread, then there would be
+        # no id here, so look by block and use the id of the queued request
+        status = migrateApi.statusMigration(block_name=block)
+        try:
+            id = status[0].get("migration_request_id")
+            state = status[0].get("migration_status")
+            retry_count = status[0].get("retry_count")
+        except:
+            msg="ERROR: Can't get status for ALREADY QUEUED migration of block %s. Do crab -uploadLog and contact support" % block
+            raise CrabException(msg)
+        
+    return (atDestination, id)
+ 
+
 
 
 def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
@@ -72,45 +115,25 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     blocks_to_migrate = source_blocks - existing_blocks
     common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
     if blocks_to_migrate:
-        nMigReq=len(blocks_to_migrate)
-        common.logger.info("%d blocks must be migrated to destination dataset %s." % (nMigReq, inputDataset) )
+        nBlocksToMig=len(blocks_to_migrate)
+        common.logger.info("%d blocks must be migrated to destination dataset %s." % (nBlocksToMig,inputDataset) )
         common.logger.debug("list of blocks to migrate:\n%s." % ", ".join(blocks_to_migrate) )
         should_migrate = True
     else:
         common.logger.info("No migration needed")
         should_migrate = False
     if should_migrate:
-        sourceURL = sourceApi.url
         migrationIds=[]
-        todoMigrations=nMigReq
-        msg="Submitting %d block migration requests to DBS3..." % nMigReq
+        todoMigrations=nBlocksToMig
+        msg="Submitting %d block migration requests to DBS3..." % nBlocksToMig
         common.logger.info(msg)
         for block in blocks_to_migrate:
-            data = {'migration_url': sourceURL, 'migration_input': block}
-            common.logger.debug("Submit migrate request for %s ..." % block)
-            try:
-                result = migrateApi.submitMigration(data)
-            except HTTPError, he:
-                if "is already at destination" in he.msg:
-                    common.logger.info("...block is already at destination")
-                    todoMigrations += -1
-                    continue
-                else:
-                    common.logger.info("ERROR: Request to migrate %s failed." % block)
-                    common.logger.info("ERROR: Request detail: %s" % data)
-                    common.logger.info("DBS3 EXCEPTION %s\n" % he.msg)
-                    return []
-            common.logger.debug("Result of migration request %s" % str(result))
-            id = result.get("migration_details", {}).get("migration_request_id")
-            if id == None:
-                common.logger.info("ERROR: Migration request failed to submit.")
-                common.logger.info("ERROR: Migration request results: %s" % str(result))
-                return []
-            if result.get("migration_report") == 'REQUEST ALREADY QUEUED':
-                msg = "ERROR: Migration %d : REQUEST ALREADY QUEUED." % id
-                msg += " Do crab -uploadLog and contact support"
-                raise CrabException(msg)
-            migrationIds.append(id)
+            (atDestination,id) = requestBlockMigration(migrateApi, sourceApi, block)
+            if atDestination:
+                todoMigrations += -1
+            else:
+                migrationIds.append(id)
+
         msg="%d block migration requests submitted. Now wait for completion." % todoMigrations
         common.logger.info(msg)
         msg = " List of migration requests: %s" % migrationIds
