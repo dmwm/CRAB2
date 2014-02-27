@@ -191,8 +191,10 @@ class Scheduler :
         try:
             remoteListTmp = self.listRemoteDir(endpoint)
         except Exception, ex:
-            msg =  'Problems trying remote dir check: \n\t%s'%str(ex)
-            raise CrabException(msg)
+            msg =  'WARNING: Problems trying remote dir check: \n\t%s'%str(ex)
+            msg += '\nWARNING: Stage out of output files may fail'
+            common.logger.info(msg)
+            remoteListTmp=False
         if remoteListTmp is False:
             return
         if remoteListTmp == []:
