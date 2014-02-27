@@ -217,7 +217,7 @@ class DataDiscovery:
 
         if verifyDBS23:
             if not self.compareFilesStructure(files2,files3):
-                common.logger.info("ERROR: DBS2 - DB3 comparsion failed, please run crab -uploadLog and report to crabFeedback")
+                common.logger.info("ERROR: DBS2 - DB3 comparison failed, please run crab -uploadLog and report to crabFeedback")
         
 
         # Check to see what the dataset is
@@ -367,6 +367,7 @@ class DataDiscovery:
         #    else:
             filesInBlock=api.listFiles(block_name=blockName, detail=True)
             for file in filesInBlock:
+                if not file['is_file_valid'] : continue
                 lfn=file['logical_file_name']
                 # prepare entry for files structure for this file
                 # LumiList will be filled later as lumidics for this file
