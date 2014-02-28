@@ -12,9 +12,11 @@
 ###########################################################################
 
 prog_name = 'crab'
-prog_version = (2, 10, '3_patch3')
+prog_version = (2, 10, 3)
+prog_tag = 'patch3'
 prog_version_str=`prog_version[0]`+'.'+`prog_version[1]`+'.'+`prog_version[2]`
-prog_version_str="%s.%s.%s" % prog_version
+if prog_tag and len(prog_tag)>0:
+    prog_version_str+= "_%s" % prog_tag
 prog_authors = [
     ['Stefano Lacaprara', 'Stefano.Lacaprara@pd.infn.it', 'INFN/LNL'],
     ['Daniele Spiga', 'Daniele.Spiga@pg.infn.it', 'CERN'],
