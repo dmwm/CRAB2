@@ -100,20 +100,23 @@ def requestBlockMigration(migrateApi, sourceApi, block):
             msg="ERROR: Can't get status for ALREADY QUEUED migration of block %s. Do crab -uploadLog and contact support" % block
             raise CrabException(msg)
         
-    return (atDestination, id)
- 
+    return (atDestination, id) 
 
 
+def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBlocks):
 
-def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
     # Submit one migration request for each block that needs migrating
+    # if inputBlocks is missing, migrate full dataset
 
-    # If the dataset exists in the destination; make sure source and destination
-    # have the same blocks.
-    existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
-    source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
-    blocks_to_migrate = source_blocks - existing_blocks
-    common.logger.info("Dataset %s in destination DBS with %d blocks; %d blocks in source." % (inputDataset, len(existing_blocks), len(source_blocks)))
+    if inputBlocks:
+        blocks_to_migrate = set (inputBlocks)
+    else :
+        # If the dataset exists in the destination, make list of missing blocks
+        existing_blocks = set([i['block_name'] for i in destReadApi.listBlocks(dataset=inputDataset)])
+        source_blocks = set([i['block_name'] for i in sourceApi.listBlocks(dataset=inputDataset)])
+        blocks_to_migrate = source_blocks - existing_blocks
+        common.logger.info("Dataset %s in destination DBS with %d blocks; %d are desired." % (inputDataset, len(existing_blocks), len(source_blocks)))
+
     if blocks_to_migrate:
         nBlocksToMig=len(blocks_to_migrate)
         common.logger.info("%d blocks must be migrated to destination dataset %s." % (nBlocksToMig,inputDataset) )
@@ -146,7 +149,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
         # 1=IN PROGRESS
         # 2=SUCCESS
         # 3=FAILED (failed migrations are retried up to 3 times automatically)
-        # 
+        # 9=Terminally FAILED
 
         failedMigrations=0
         okMigrations=0
@@ -173,7 +176,13 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset):
                     common.logger.info("Migration id %d has succeeded" % id)
                     migrationIds.remove(id)
                     okMigrations += 1
-                if state ==3:
+                if state == 9:
+                    common.logger.info("99999999999999999999999999999999")
+                    common.logger.info("Migration id %d has failed" % id)
+                    common.logger.debug("Full status for migration id %d:\n%s" % (id, str(status)))
+                    migrationIds.remove(id)
+                    failedMigrations += 1
+                if state == 3:
                     if retry_count == 3:
                         common.logger.info("Migration id %d has failed" % id)
                         common.logger.debug("Full status for migration id %d:\n%s" % (id, str(status)))
@@ -211,22 +220,31 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
     max_files_per_block = 500
     blockSize = max_files_per_block
 
-    # Submit migration if needed
-    if inputDataset.upper() != 'NONE':
-        common.logger.info("Request migration of input dataset and its parents")
-        existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset)
-        if not existing_datasets:
-            common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
-            return [], [], []
+    # TODO must delay this to after the loop on toPublish so have list of parent blocks and datasets
 
-        # Get basic data about the parent dataset
-        if not (existing_datasets and existing_datasets[0]['dataset'] == inputDataset):
-            common.logger.info("ERROR: Inconsistent state: %s migrated, but listDatasets didn't return any information")
-            return [], [], []
+    migrateFullInputDataset = False
+    # Submit input dataset migration if needed
+
+    if inputDataset.upper() != 'NONE':
+        if  migrateFullInputDataset:
+            blockList = None
+            common.logger.info("Request migration of input dataset and its parents")
+            existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, blockList)
+            if not existing_datasets:
+                common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
+                return [], [], []
+
+            # Get basic data about the parent dataset
+            if not (existing_datasets and existing_datasets[0]['dataset'] == inputDataset):
+                common.logger.info("ERROR: Inconsistent state: %s migrated, but listDatasets didn't return any information")
+                return [], [], []
+        else : 
+            # will only migrate needed parent blocks
+            existing_datasets = sourceApi.listDatasets(dataset=inputDataset, detail=True, dataset_access_type='*')
         primary_ds_type = existing_datasets[0]['primary_ds_type']
-    else :
-        common.logger.info("Input datset absent. No migration needed")
-        primary_ds_type = 'mc'
+    else:
+            common.logger.info("Input datset absent. No migration needed")
+            primary_ds_type = 'mc'
 
     acquisition_era_name = 'CRAB'
     global_tag = 'crab2_tag'
@@ -270,11 +288,10 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
             msg += str(ex)
             msg += str(traceback.format_exc())
             common.logger.info(msg)
-        workToDo = False
 
         # Is there anything to do?
+        workToDo = False
         for file in files:
-
             if not file['lfn'] in existingFiles:
                 workToDo = True
                 break
@@ -303,33 +320,53 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         common.logger.debug("About to insert dataset: %s" % str(dataset_config))
 
         dbsFiles = []
+        parentFiles=set()
+        parentBlocks=set()
+        #parent_block_list=[]
         for file in files:
             if not file['lfn'] in existingFiles:
                 dbsFiles.append(format_file_3(file))
+                # fill list of missing parent blocks
+                for f in file['parents']:
+                    if not f in parentFiles:
+                        parentFiles.add(f)
+                        bDict=destReadApi.listBlocks(logical_file_name=f)
+                        if not bDict:  # must fetch parent from source  
+                            bDict=sourceApi.listBlocks(logical_file_name=f)
+                            parentBlocks.add(bDict[0]['block_name'])
             published.append(file['lfn'])
+
+        if not migrateFullInputDataset and parentBlocks:
+        # migrate parent blocks before trying to publish
+            existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, parentBlocks)
+            if not existing_datasets:
+                common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
+                return [], [], []
+            if not existing_datasets[0]['dataset'] == inputDataset:
+                common.logger.info("ERROR: Inconsistent state: %s migrated, but listDatasets didn't return any information")
+                return [], [], []
+
+        # all ready loop on files and publish blocks
         count = 0
         blockCount = 0
         if len(dbsFiles) < max_files_per_block:
-            #common.logger.debug("WF is not expired %s and the list is %s" %(workflow, self.not_expired_wf))
-            #if not self.not_expired_wf:
-            if True:  #exprired_wf concept does not exist for Crab2. bad place for this anyhow
-                block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
-                files_to_publish = dbsFiles[count:count+blockSize]
-                try:
-                    block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
-                    common.logger.debug("Inserting files %s into block %s." % ([i['logical_file_name'] for i in files_to_publish], block_name))
-                    blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
-                    common.logger.info("Publishing block %s with %d files"%(block_name, len(files_to_publish)))
-                    destApi.insertBulkBlock(blockDump)
-                    count += blockSize
-                    blockCount += 1
-                except Exception, ex:
-                    failed += [i['logical_file_name'] for i in files_to_publish]
-                    msg = "ERROR when publishing block:\n"
-                    msg += pprint.pformat(blockDump)+"\n\n"
-                    msg += str(ex)+"\n"
-                    msg += str(traceback.format_exc())
-                    common.logger.info(msg)
+            block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
+            files_to_publish = dbsFiles[count:count+blockSize]
+            try:
+                block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
+                common.logger.debug("Inserting files %s into block %s." % ([i['logical_file_name'] for i in files_to_publish], block_name))
+                blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
+                common.logger.info("Publishing block %s with %d files"%(block_name, len(files_to_publish)))
+                destApi.insertBulkBlock(blockDump)
+                count += blockSize
+                blockCount += 1
+            except Exception, ex:
+                failed += [i['logical_file_name'] for i in files_to_publish]
+                msg = "ERROR when publishing block:\n"
+                msg += pprint.pformat(blockDump)+"\n\n"
+                msg += str(ex)+"\n"
+                msg += str(traceback.format_exc())
+                common.logger.info(msg)
         else:
             while count < len(dbsFiles):
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
