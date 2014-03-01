@@ -143,7 +143,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
         common.logger.info(msg)
 
         # Wait forever, then return to the main loop. Note we don't
-        # fail or cancel anything. Just retry later if users Ctl-C's crab
+        # fail or cancel anything. Just retry later if user Ctl-C's crab
         # States:
         # 0=PENDING
         # 1=IN PROGRESS
@@ -177,8 +177,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
                     migrationIds.remove(id)
                     okMigrations += 1
                 if state == 9:
-                    common.logger.info("99999999999999999999999999999999")
-                    common.logger.info("Migration id %d has failed" % id)
+                    common.logger.info("Migration id %d terminally FAILED. State = 9." % id)
                     common.logger.debug("Full status for migration id %d:\n%s" % (id, str(status)))
                     migrationIds.remove(id)
                     failedMigrations += 1
@@ -189,6 +188,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
                         migrationIds.remove(id)
                         failedMigrations += 1
                     else:
+                        common.logger.info("Migration id %d will be retried" % id)
                         pass
                 if state == 0 or state == 1:
                     pass
@@ -198,7 +198,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
         msg="blocks to migrate: %d. Success %d. Fail %d." % (todoMigrations, okMigrations, failedMigrations)
         common.logger.info(msg)
         if failedMigrations > 0:
-            msg="some blocks failed to migrate, try again later after problem is resolved"
+            msg="some blocks failed to migrate, report to support and try again later after problem is resolved"
             common.logger.info(msg)
             return []
         else:
@@ -220,31 +220,12 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
     max_files_per_block = 500
     blockSize = max_files_per_block
 
-    # TODO must delay this to after the loop on toPublish so have list of parent blocks and datasets
-
-    migrateFullInputDataset = False
-    # Submit input dataset migration if needed
-
     if inputDataset.upper() != 'NONE':
-        if  migrateFullInputDataset:
-            blockList = None
-            common.logger.info("Request migration of input dataset and its parents")
-            existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, blockList)
-            if not existing_datasets:
-                common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
-                return [], [], []
-
-            # Get basic data about the parent dataset
-            if not (existing_datasets and existing_datasets[0]['dataset'] == inputDataset):
-                common.logger.info("ERROR: Inconsistent state: %s migrated, but listDatasets didn't return any information")
-                return [], [], []
-        else : 
-            # will only migrate needed parent blocks
-            existing_datasets = sourceApi.listDatasets(dataset=inputDataset, detail=True, dataset_access_type='*')
+        existing_datasets = sourceApi.listDatasets(dataset=inputDataset, detail=True, dataset_access_type='*')
         primary_ds_type = existing_datasets[0]['primary_ds_type']
     else:
-            common.logger.info("Input datset absent. No migration needed")
-            primary_ds_type = 'mc'
+        common.logger.info("Input datset absent. No migration needed")
+        primary_ds_type = 'mc'
 
     acquisition_era_name = 'CRAB'
     global_tag = 'crab2_tag'
@@ -322,7 +303,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
         dbsFiles = []
         parentFiles=set()
         parentBlocks=set()
-        #parent_block_list=[]
+
         for file in files:
             if not file['lfn'] in existingFiles:
                 dbsFiles.append(format_file_3(file))
@@ -336,8 +317,8 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                             parentBlocks.add(bDict[0]['block_name'])
             published.append(file['lfn'])
 
-        if not migrateFullInputDataset and parentBlocks:
-        # migrate parent blocks before trying to publish
+        if parentBlocks:
+        # migrate parent blocks before publishing
             existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, parentBlocks)
             if not existing_datasets:
                 common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
