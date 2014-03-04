@@ -26,7 +26,7 @@ class SchedulerCaf(SchedulerLsf) :
         """
         SchedulerLsf.configure(self, cfg_params)
         self.queue = cfg_params.get(self.name().upper()+'.queue','cmscaf1nw')
-        self.res = cfg_params.get(self.name().upper()+'.resource','"type==SLC5_64 || type==SLC4_64"')
+        self.res = cfg_params.get(self.name().upper()+'.resource','"type==SLC6_64"')
         self.group = cfg_params.get(self.name().upper()+'.group', None)
 
     def sched_parameter(self,i,task):
