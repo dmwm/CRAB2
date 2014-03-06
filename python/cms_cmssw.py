@@ -1250,7 +1250,7 @@ class Cmssw(JobType):
         if list : return self.output_file
         return txt
 
-    def checkCMSSWVersion(self, url = "https://cmssdt.cern.ch/SDT/cgi-bin", fileName = "ReleasesXML"):
+    def checkCMSSWVersion(self, url = "https://cmssdt.cern.ch/SDT/cgi-bin", fileName = "ReleasesXML?anytype=1"):
         """
         compare current CMSSW release and arch with allowed releases
         """
