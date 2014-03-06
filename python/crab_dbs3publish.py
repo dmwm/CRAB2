@@ -262,7 +262,7 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
             existingDBSFiles = destReadApi.listFiles(dataset=dbsDatasetPath)
             existingFiles = [x['logical_file_name'] for x in existingDBSFiles]
             results[datasetPath]['existingFiles'] = len(existingFiles)
-        except DbsException, ex:
+        except Exception, ex:
             existingDBSFiles = []
             existingFiles = []
             msg = "Error when listing files in DBS"
