@@ -34,7 +34,7 @@ class Cmssw(JobType):
         self._params = {}
         self.cfg_params = cfg_params
         ### FOR MULTI ###
-        self.var_filter=''
+        #self.var_filter=''
 
         ### Temporary patch to automatically skip the ISB size check:
         self.server = self.cfg_params.get('CRAB.server_name',None) or \
@@ -348,16 +348,16 @@ class Cmssw(JobType):
             ### FOR MULTI ###
             #edmOutput = PsetEdit.getPoolOutputModule()
             edmOutputDict = PsetEdit.getPoolOutputModule()
-            common.logger.debug("(test) edmOutputDict = "+str(edmOutputDict))
-            filter_dict = {}
-            for key in edmOutputDict.keys():
-                filter_dict[key]=edmOutputDict[key]['dataset']
-            common.logger.debug("(test) filter_dict for multi =  "+str(filter_dict))
+            #common.logger.debug("(test) edmOutputDict = "+str(edmOutputDict))
+            #filter_dict = {}
+            #for key in edmOutputDict.keys():
+            #    filter_dict[key]=edmOutputDict[key]['dataset']
+            #common.logger.debug("(test) filter_dict for multi =  "+str(filter_dict))
 
             #### in CMSSW.sh: export var_filter
 
-            self.var_filter = json.dumps(filter_dict)
-            common.logger.debug("(test) var_filter for multi =  "+self.var_filter)
+            #self.var_filter = json.dumps(filter_dict)
+            #common.logger.debug("(test) var_filter for multi =  "+self.var_filter)
 
             edmOutput = edmOutputDict.keys()
             if int(self.cfg_params.get('CMSSW.get_edm_output',0)):
@@ -818,10 +818,10 @@ class Cmssw(JobType):
             txt += 'echo "IncrementSeeds:<$IncrementSeeds>"\n'
 
             txt += 'mv -f ' + pset + ' ' + psetName + '\n'
-            if self.var_filter:
-                #print "self.var_filter = ",self.var_filter
-                txt += "export var_filter="+"'"+self.var_filter+"'\n"
-                txt += 'echo $var_filter'
+            #if self.var_filter:
+            #    #print "self.var_filter = ",self.var_filter
+            #    txt += "export var_filter="+"'"+self.var_filter+"'\n"
+            #    txt += 'echo $var_filter'
         else:
             txt += '\n'
             if self.AdditionalArgs: txt += 'export AdditionalArgs=\"%s\"\n'%(self.AdditionalArgs)
