@@ -348,6 +348,9 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                 msg += str(ex)+"\n"
                 msg += str(traceback.format_exc())
                 common.logger.info(msg)
+            else:
+                msg="Block Publication Successful"
+                common.logger.info(msg)
         else:
             while count < len(dbsFiles):
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
@@ -374,6 +377,9 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                     msg += str(traceback.format_exc())
                     common.logger.info(msg)
                     count += blockSize
+                else:
+                    msg="Block Publication Successful"
+                    common.logger.info(msg)
         results[datasetPath]['files'] = len(dbsFiles) - len(failed)
         results[datasetPath]['blocks'] = blockCount
     published = filter(lambda x: x not in failed + publish_next_iteration, published)
