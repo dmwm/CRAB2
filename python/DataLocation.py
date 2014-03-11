@@ -60,7 +60,7 @@ class DataLocation:
                 dls=DLSInfo(DLS_type,self.cfg_params)
                 blockSites = self.PrepareDict(dls)
             else:
-                # assume it is some test DBS3 end point
+                # assume it is some DBS3 end point
                 try:
                     blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
                 except:
@@ -81,7 +81,10 @@ class DataLocation:
         for block in self.Listfileblocks:
             blockInfo=api.listBlocks(block_name=block,detail=True)
             location=blockInfo[0]['origin_site_name']
-            blockSites[block] = [location]
+            if location == 'UNKNOWN':
+                blockSites[block] = []
+            else:
+                blockSites[block] = [location]
 
         return blockSites
 
