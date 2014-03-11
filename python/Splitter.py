@@ -722,22 +722,26 @@ class JobSplitter:
         fileList = pubdata.getListFiles()
         wmFileList = []
         for jobFile in fileList:
+            #print "SB jobFIle ", jobFile
             block = jobFile['Block']['Name']
             try:
                 jobFile['Block']['StorageElementList'].extend(blockSites[block])
             except:
                 continue
             wmbsFile = File(jobFile['LogicalFileName'])
+            #print "SB wmbsFile ", wmbsFile
+            #print "SB bs ", blockSites[block]
             if not  blockSites[block]:
                 msg = 'WARNING: No sites are hosting any part of data for block: %s\n' %block 
                 msg += 'Related jobs will not be submitted and this block of data can not be analyzed'
-                common.logger.debug(msg)
-               # wmbsFile['locations'].add('Nowhere')
-            [ wmbsFile['locations'].add(x) for x in blockSites[block] ]
-            wmbsFile['block'] = block
-            for lumi in lumisPerFile[jobFile['LogicalFileName']]:
-                wmbsFile.addRun(Run(lumi[0], lumi[1]))
-            wmFileList.append(wmbsFile)
+                common.logger.info(msg)
+                #wmbsFile['locations'].add('Nowhere')
+            else:
+                [ wmbsFile['locations'].add(x) for x in blockSites[block] ]
+                wmbsFile['block'] = block
+                for lumi in lumisPerFile[jobFile['LogicalFileName']]:
+                    wmbsFile.addRun(Run(lumi[0], lumi[1]))
+                wmFileList.append(wmbsFile)
 
         fileSet = set(wmFileList)
         thefiles = Fileset(name='FilesToSplit', files = fileSet)
