@@ -722,15 +722,12 @@ class JobSplitter:
         fileList = pubdata.getListFiles()
         wmFileList = []
         for jobFile in fileList:
-            #print "SB jobFIle ", jobFile
             block = jobFile['Block']['Name']
             try:
                 jobFile['Block']['StorageElementList'].extend(blockSites[block])
             except:
                 continue
             wmbsFile = File(jobFile['LogicalFileName'])
-            #print "SB wmbsFile ", wmbsFile
-            #print "SB bs ", blockSites[block]
             if not  blockSites[block]:
                 msg = 'WARNING: No sites are hosting any part of data for block: %s\n' %block 
                 msg += 'Related jobs will not be submitted and this block of data can not be analyzed'
