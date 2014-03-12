@@ -231,11 +231,17 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
     global_tag = 'crab2_tag'
     processing_era_config = {'processing_version': 1, 'description': 'crab2'}
 
+    if len(toPublish) == 0:
+        msg = "WARNING: nothing to  publish"
+        common.logger.info(msg)
+
     for datasetPath, files in toPublish.iteritems():
         results[datasetPath] = {'files': 0, 'blocks': 0, 'existingFiles': 0,}
         dbsDatasetPath = datasetPath
 
         if not files:
+            msg = "WARNING: no files to publish for dataset %s" % datasetPath
+            common.logger.info(msg)
             continue
 
         appName = 'cmsRun'
