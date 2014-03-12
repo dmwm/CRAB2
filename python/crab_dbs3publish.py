@@ -231,11 +231,17 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
     global_tag = 'crab2_tag'
     processing_era_config = {'processing_version': 1, 'description': 'crab2'}
 
+    if len(toPublish) == 0:
+        msg = "WARNING: nothing to  publish"
+        common.logger.info(msg)
+
     for datasetPath, files in toPublish.iteritems():
         results[datasetPath] = {'files': 0, 'blocks': 0, 'existingFiles': 0,}
         dbsDatasetPath = datasetPath
 
         if not files:
+            msg = "WARNING: no files to publish for dataset %s" % datasetPath
+            common.logger.info(msg)
             continue
 
         appName = 'cmsRun'
@@ -348,6 +354,9 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                 msg += str(ex)+"\n"
                 msg += str(traceback.format_exc())
                 common.logger.info(msg)
+            else:
+                msg="Block Publication Successful"
+                common.logger.info(msg)
         else:
             while count < len(dbsFiles):
                 block_name = "%s#%s" % (dbsDatasetPath, str(uuid.uuid4()))
@@ -374,6 +383,9 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                     msg += str(traceback.format_exc())
                     common.logger.info(msg)
                     count += blockSize
+                else:
+                    msg="Block Publication Successful"
+                    common.logger.info(msg)
         results[datasetPath]['files'] = len(dbsFiles) - len(failed)
         results[datasetPath]['blocks'] = blockCount
     published = filter(lambda x: x not in failed + publish_next_iteration, published)

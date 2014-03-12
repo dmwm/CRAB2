@@ -439,6 +439,10 @@ class Publisher(Actor):
 
         for crabFjr in good_list:                 # this is the list of FJR's in crab res
             fjr=readJobReport(crabFjr)[0]         # parse into python
+            if not fjr.files:
+                msg = "WARNING: No EDM file to be published in %s" % crabFjr.split('/')[-1]
+                common.logger.info(msg)
+
             for outFile in fjr.files:             # one fjr may have multiple output LFN's
                 dset_info=outFile.dataset[0]      # better there is only one dataset per file !
                 procds=dset_info['ProcessedDataset']
