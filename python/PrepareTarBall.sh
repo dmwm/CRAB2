@@ -17,7 +17,7 @@ DLSAPItag="DLS_1_1_3"
 PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_61"
 WMCOREtag="WMCORE_CRAB2_3"
 WMCOREWMtag="0.9.94"
-DBS3tag="DBS_3_1_9c"
+DBS3tag="DBS_3_2_3"
 
 
 ## download CRAB from GITHUB and cleanup the code a bit
