@@ -81,8 +81,8 @@ git clone -b ${DBS3tag} https://github.com/dmwm/DBS.git DBS3
 mkdir dbs3client
 mv DBS3/PycurlClient/src/python/* ./dbs3client/
 mv DBS3/Client/src/python/* ./dbs3client/
-mv DBS3/Client/utils//DataOpsScripts/DBS3SetDatasetStatus.py ${CRABDIR}/python
-mv DBS3/Client/utils//DataOpsScripts/DBS3SetFileStatus.py ${CRABDIR}/python
+mv DBS3/Client/utils//DataOpsScripts/DBS3SetDatasetStatus.py ../python
+mv DBS3/Client/utils//DataOpsScripts/DBS3SetFileStatus.py ../python
 rm -rf DBS3
 
 #
