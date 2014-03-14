@@ -158,12 +158,26 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         cmsver=re.split('_', cmsVersion)
         numericCmsVersion = "%s%.2d%.2d" %(cmsver[1], int(cmsver[2]), int(cmsver[3]))
 
+        if "slc5" in scramArch:
+            cmsOpSys = "LINUX"
+            cmsOpSysMajorVer = "5,6"  # SL5 exe's also run on SL6
+        if "slc6" in scramArch:
+            cmsOpSys = "LINUX"
+            cmsOpSysMajorVer = "6"
+        if "ia32" in scramArch:
+            cmsArch = "INTEL,X86_64" # 32bit exe's also run on 64bit
+        if "amd64" in scramArch:
+            cmsArch = "X86_64"
+
         # protect against datasetPath being None
         jobParams += '+DESIRED_CMSDataset ="' + str(self.datasetPath) + '";'
             
         jobParams += '+DESIRED_CMSVersion ="' +cmsVersion+'";'
         jobParams += '+DESIRED_CMSVersionNr ="' +numericCmsVersion+'";'
         jobParams += '+DESIRED_CMSScramArch ="' +scramArch+'";'
+        jobParams += '+DESIRED_OpSys ="' +cmsOpSys+'";'
+        jobParams += '+DESIRED_OpSysMajorVer ="' +cmsOpSysMajorVer+'";'
+        jobParams += '+DESIRED_Arch ="' +cmsArch+'";'
 
         userName = gethnUserNameFromSiteDB()
         jobParams += '+AccountingGroup ="' + userName+'";'
