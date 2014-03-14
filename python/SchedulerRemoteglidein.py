@@ -175,9 +175,9 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         jobParams += '+DESIRED_CMSVersion ="' +cmsVersion+'";'
         jobParams += '+DESIRED_CMSVersionNr ="' +numericCmsVersion+'";'
         jobParams += '+DESIRED_CMSScramArch ="' +scramArch+'";'
-        jobParams += '+DESIRED_OpSys ="' +cmsOpSys+'";'
-        jobParams += '+DESIRED_OpSysMajorVer ="' +cmsOpSysMajorVer+'";'
-        jobParams += '+DESIRED_Arch ="' +cmsArch+'";'
+        jobParams += '+DESIRED_OpSyses ="' +cmsOpSys+'";'
+        jobParams += '+DESIRED_OpSysMajorVers ="' +cmsOpSysMajorVer+'";'
+        jobParams += '+DESIRED_Archs ="' +cmsArch+'";'
 
         userName = gethnUserNameFromSiteDB()
         jobParams += '+AccountingGroup ="' + userName+'";'
