@@ -41,7 +41,7 @@ class SchedulerPbsv2(SchedulerLocal):
         SchedulerLocal.configure(self, cfg_params)
         queueConfigName = "%s.queue" % self.name().upper()
         if queueConfigName in cfg_params:
-            if len(cfg_params[queueConfigNAme]) == 0 or cfg_params[queueConfigName] == "default":
+            if len(cfg_params[queueConfigName]) == 0 or cfg_params[queueConfigName] == "default":
                 common.logger.info(" The default queue of local PBS configuration will be used")
         else:
             common.logger.info(" The default queue of local PBS configuration will be used")
@@ -73,7 +73,7 @@ class SchedulerPbsv2(SchedulerLocal):
         except KeyError:
             msg = "Error: datasetpath not defined "
             raise CrabException(msg)
-        
+
         if int(cfg_params.get(self.name().upper() + '.use_proxy',1)):
             common.logger.info("Using a proxy")
             self.use_proxy = 1
@@ -99,8 +99,8 @@ class SchedulerPbsv2(SchedulerLocal):
         """
         params={'jobScriptDir':common.work_space.jobDir(),
                 'jobResDir':common.work_space.resDir()
-               } 
-		
+               }
+
 		# update parameters
         for s in ('resources', 'queue', 'workernodebase', 'hostname', 'forcetransferfiles', 'grouplist'):
             params[s] = cfg_params.get( self.name().upper()+'.'+s,'' )
