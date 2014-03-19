@@ -317,10 +317,15 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
                 for f in file['parents']:
                     if not f in parentFiles:
                         parentFiles.add(f)
+                        # is this parent file already in destination DBS ?
                         bDict=destReadApi.listBlocks(logical_file_name=f)
                         if not bDict:  # must fetch parent from source  
                             bDict=sourceApi.listBlocks(logical_file_name=f)
-                            parentBlocks.add(bDict[0]['block_name'])
+                            if bDict:   # found in source, mark block to be inserted
+                                parentBlocks.add(bDict[0]['block_name'])
+                        if not bDict:
+                            msg = "skipping parent file not known to DBS: %s" % f
+                            common.logger.info(msg)
             published.append(file['lfn'])
 
         if parentBlocks:
