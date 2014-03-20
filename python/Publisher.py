@@ -476,8 +476,8 @@ class Publisher(Actor):
                 fileDic['lfn']=outFile['LFN']
                 fileDic['filesize']=outFile['Size']
                 fileDic['runlumi']=outFile['Runs']
-                # beware duplicate parents in FJR
-                fileDic['parents']=[p for p in set(outFile.parentLFNs())]
+                # beware duplicate parents in FJR and parent='' when fjr had no LFN
+                fileDic['parents']=[p for p in set(outFile.parentLFNs()) if p]
                 if originSite:
                     if outFile['SEName'] != originSite:
                         msg = "ERROR: not all files to be published have same location"
