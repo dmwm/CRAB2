@@ -119,7 +119,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
 
     if blocks_to_migrate:
         nBlocksToMig=len(blocks_to_migrate)
-        common.logger.info("%d blocks must be migrated to destination dataset %s." % (nBlocksToMig,inputDataset) )
+        common.logger.info("%d blocks must be migrated to " % (nBlocksToMig,destReadApi.url) )
         common.logger.debug("list of blocks to migrate:\n%s." % ", ".join(blocks_to_migrate) )
         should_migrate = True
     else:
@@ -202,13 +202,13 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
             common.logger.info(msg)
             return []
         else:
-            common.logger.info("Migration was succesful")
+            common.logger.info("Migration was successful")
         
     existing_datasets = destReadApi.listDatasets(dataset=inputDataset, detail=True,dataset_access_type='*')
 
     return existing_datasets
 
-def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite):
+def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite):
     """
     Publish files into DBS3
     """
@@ -308,29 +308,56 @@ def publishInDBS3(sourceApi, inputDataset, toPublish, destApi, destReadApi, migr
 
         dbsFiles = []
         parentFiles=set()
-        parentBlocks=set()
+        #localParentFiles=set()
+        localParentBlocks=set()
+        #globalParentFiles=set()
+        globalParentBlocks=set()
 
         for file in files:
             if not file['lfn'] in existingFiles:
-                dbsFiles.append(format_file_3(file))
-                # fill list of missing parent blocks
-                for f in file['parents']:
-                    if not f in parentFiles:
+                # new file to publish, fill list of missing parent blocks
+                for f in list(file['parents']) : # iterate on a copy, so can change original
+                    if not f in parentFiles :
                         parentFiles.add(f)
                         # is this parent file already in destination DBS ?
                         bDict=destReadApi.listBlocks(logical_file_name=f)
-                        if not bDict:  # must fetch parent from source  
+                        if not bDict:
+                            # parent file is not in destination DBS
+                            # is it in same DBS instance as input dataset (source) ?  
                             bDict=sourceApi.listBlocks(logical_file_name=f)
-                            if bDict:   # found in source, mark block to be inserted
-                                parentBlocks.add(bDict[0]['block_name'])
+                            if bDict:  # found in source, mark block to be inserted
+                               localParentBlocks.add(bDict[0]['block_name'])
+                            else:      # last chance: is file maybe in global DBS ?
+                                bDict=globalApi.listBlocks(logical_file_name=f)
+                                if bDict:  # found in global, mark block to be inserted
+                                    globalParentBlocks.add(bDict[0]['block_name'])
                         if not bDict:
                             msg = "skipping parent file not known to DBS: %s" % f
                             common.logger.info(msg)
+                            file['parents'].remove(f)
+                # add to list of files to be published
+                dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
 
-        if parentBlocks:
+        if localParentBlocks:
+            msg="list of parent blocks that need to be migrated from %s:\n%s" % \
+                 (sourceApi.url, localParentBlocks)
+            common.logger.info(msg)
         # migrate parent blocks before publishing
-            existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, parentBlocks)
+            existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, localParentBlocks)
+            if not existing_datasets:
+                common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
+                return [], [], []
+            if not existing_datasets[0]['dataset'] == inputDataset:
+                common.logger.info("ERROR: Inconsistent state: %s migrated, but listDatasets didn't return any information")
+                return [], [], []
+
+        if globalParentBlocks:
+            msg="list of parent blocks that need to be migrated from %s:\n%s" % \
+                 (globalApi.url, globalParentBlocks)
+            common.logger.info(msg)
+        # migrate parent blocks before publishing
+            existing_datasets = migrateByBlockDBS3(migrateApi, destReadApi, globalApi, inputDataset, globalParentBlocks)
             if not existing_datasets:
                 common.logger.info("Failed to migrate %s from %s to %s; not publishing any files." % (inputDataset, sourceApi.url, migrateApi.url))
                 return [], [], []

@@ -371,6 +371,7 @@ class Publisher(Actor):
             status = self.DBS2Publish(good_list)
         elif pubToDBS3:
             argsForDbs3 = self.PrepareForDBS3Publish(good_list)
+            globalApi    = argsForDbs3['globalApi']
             sourceApi    = argsForDbs3['sourceApi']
             inputDataset = argsForDbs3['inputDataset']
             toPublish    = argsForDbs3['toPublish']
@@ -379,7 +380,7 @@ class Publisher(Actor):
             migrateApi   = argsForDbs3['migrateApi']
             originSite   = argsForDbs3['origin_site_name']
             (failed,published,results) = publishInDBS3(\
-                sourceApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
+                sourceApi, globalApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
             if len(failed) == 0:
                 status='0'
             else:
@@ -425,6 +426,15 @@ class Publisher(Actor):
         inputDataset = self.cfg_params.get('CMSSW.datasetpath','None')
 
         sourceApi = Dbs3Api(url=sourceUrl)
+        
+        # when looking up parents may need to look in global DBS as well
+        globalUrl = sourceUrl   # if this is not global, next lines will make it
+        globalUrl = globalUrl.replace('phys01','global')
+        globalUrl = globalUrl.replace('phys02','global')
+        globalUrl = globalUrl.replace('phys03','global')
+        globalUrl = globalUrl.replace('caf','global')
+        globalApi = Dbs3Api(url=globalUrl)
+
         destinationApi = Dbs3Api(url=destUrl)
         # be safe, use RO Api unless really want to write
         destinationReadApi = Dbs3Api(url=destReadUrl)
@@ -484,6 +494,7 @@ class Publisher(Actor):
         # all done
         argsForDbs3 = { \
             'sourceApi' : sourceApi,
+            'globalApi' : globalApi,
             'inputDataset' : inputDataset,
             'toPublish' : toPublish,
             'destApi' : destinationApi,
