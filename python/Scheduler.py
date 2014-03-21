@@ -400,6 +400,7 @@ class Scheduler :
         """
         """
         txt = ''
+        txt += '    echo "CrabWrapper EXIT_FUNC entered at `date`   -  `date -u`"\n'
         txt += '    if [ -f ${RUNTIME_AREA}/WATCHDOG-SAYS-EXCEEDED-RESOURCE ]; then\n'
         txt += '       echo "*** Watchdog kicked in, make sure we"\n'
         txt += '       echo "*** do not go on before Watchdog completes the cleanup"\n'
@@ -504,6 +505,7 @@ class Scheduler :
         txt += '      cp -pfv _condor_stderr CMSSW_${NJob}.stderr\n'
         txt += '    fi\n'
         txt += '    tar zcvf ${out_files}.tgz  ${final_list}\n'
+        txt += '    echo "EXITING at `date`  -  `date -u`"\n'
             
         return txt
 
