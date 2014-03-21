@@ -499,12 +499,12 @@ class Scheduler :
         txt += '    echo "JOB_EXIT_STATUS = $job_exit_code"\n'
         txt += '    echo "JobExitCode=$job_exit_code" >> $RUNTIME_AREA/$repo\n'
         txt += '    dumpStatus $RUNTIME_AREA/$repo\n'
+        txt += '    echo "EXITING at `date`  -  `date -u`"\n'
         
         txt += '    if [ -s _condor_stdout ]; then\n' # update to latest stdout
         txt += '      cp -pfv _condor_stdout CMSSW_${NJob}.stdout\n'
         txt += '      cp -pfv _condor_stderr CMSSW_${NJob}.stderr\n'
         txt += '    fi\n'
-        txt += '    echo "EXITING at `date`  -  `date -u`"\n'
         txt += '    tar zcvf ${out_files}.tgz  ${final_list}\n'
             
         return txt
