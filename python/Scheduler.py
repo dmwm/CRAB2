@@ -400,6 +400,7 @@ class Scheduler :
         """
         """
         txt = ''
+        txt += '    echo "CrabWrapper EXIT_FUNC entered at `date`   -  `date -u`"\n'
         txt += '    if [ -f ${RUNTIME_AREA}/WATCHDOG-SAYS-EXCEEDED-RESOURCE ]; then\n'
         txt += '       echo "*** Watchdog kicked in, make sure we"\n'
         txt += '       echo "*** do not go on before Watchdog completes the cleanup"\n'
@@ -498,6 +499,7 @@ class Scheduler :
         txt += '    echo "JOB_EXIT_STATUS = $job_exit_code"\n'
         txt += '    echo "JobExitCode=$job_exit_code" >> $RUNTIME_AREA/$repo\n'
         txt += '    dumpStatus $RUNTIME_AREA/$repo\n'
+        txt += '    echo "EXITING at `date`  -  `date -u`"\n'
         
         txt += '    if [ -s _condor_stdout ]; then\n' # update to latest stdout
         txt += '      cp -pfv _condor_stdout CMSSW_${NJob}.stdout\n'
