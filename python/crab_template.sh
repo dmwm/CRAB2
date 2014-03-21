@@ -76,6 +76,37 @@ fi
 func_exit
 }
 
+exitBySignal()
+{
+echo "********** ${externalSignal} detected at `date`  -  `date -u`"
+outOfBound
+}
+
+detectSIGINT()
+{
+externalSignal='SIGINT'; exitBySignal
+}
+detectSIGUSR1()
+{
+externalSignal='SIGUSR1'; exitBySignal
+}
+detectSIGUSR2()
+{
+externalSignal='SIGUSR2'; exitBySignal
+}
+detectSIGXCPU()
+{
+externalSignal='SIGXCPU'; exitBySignal
+}
+detectSIGXFSZ()
+{
+externalSignal='SIGXFSZ'; exitBySignal
+}
+detectSIGTERM()
+{
+externalSignal='SIGTERM'; exitBySignal
+}
+
 
 #CRAB func_exit
 
@@ -85,7 +116,7 @@ func_exit
 RUNTIME_AREA=`pwd`
 export RUNTIME_AREA
 
-echo "Today is `date`"
+echo "Today is `date` - `date -u`"
 echo "Job submitted on host `hostname`"
 uname -a
 echo ">>> current directory (RUNTIME_AREA): `pwd`"
@@ -135,8 +166,12 @@ dumpStatus $RUNTIME_AREA/$repo
 ${RUNTIME_AREA}/crabWatchdog.sh &
 export WatchdogPID=$!
 echo "crabWatchdog started as process $WatchdogPID"
-trap outOfBound SIGUSR2
-trap outOfBound SIGTERM
+trap detectSIGINT  SIGINT
+trap detectSIGUSR1 SIGUSR1
+trap detectSIGUSR2 SIGUSR2
+trap detectSIGXCPU SIGXCPU
+trap detectSIGXFSZ SIGXFSZ
+trap detectSIGTERM SIGTERM
 
 #
 # PREPARE AND RUN EXECUTABLE
