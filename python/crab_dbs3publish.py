@@ -119,7 +119,7 @@ def migrateByBlockDBS3(migrateApi, destReadApi, sourceApi, inputDataset, inputBl
 
     if blocks_to_migrate:
         nBlocksToMig=len(blocks_to_migrate)
-        common.logger.info("%d blocks must be migrated to " % (nBlocksToMig,destReadApi.url) )
+        common.logger.info("%d blocks must be migrated to %s" % (nBlocksToMig,destReadApi.url) )
         common.logger.debug("list of blocks to migrate:\n%s." % ", ".join(blocks_to_migrate) )
         should_migrate = True
     else:
