@@ -504,8 +504,8 @@ class Scheduler :
         txt += '      cp -pfv _condor_stdout CMSSW_${NJob}.stdout\n'
         txt += '      cp -pfv _condor_stderr CMSSW_${NJob}.stderr\n'
         txt += '    fi\n'
-        txt += '    tar zcvf ${out_files}.tgz  ${final_list}\n'
         txt += '    echo "EXITING at `date`  -  `date -u`"\n'
+        txt += '    tar zcvf ${out_files}.tgz  ${final_list}\n'
             
         return txt
 
