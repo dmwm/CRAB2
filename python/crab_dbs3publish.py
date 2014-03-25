@@ -308,6 +308,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
 
         dbsFiles = []
         parentFiles=set()
+        parentsToSkip=set()
         #localParentFiles=set()
         localParentBlocks=set()
         #globalParentFiles=set()
@@ -318,7 +319,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 # new file to publish, fill list of missing parent blocks
                 for f in list(file['parents']) : # iterate on a copy, so can change original
                     if not f in parentFiles :
-                        parentFiles.add(f)
+                        parentFiles.add(f)    # add to list of parents to be imported
                         # is this parent file already in destination DBS ?
                         bDict=destReadApi.listBlocks(logical_file_name=f)
                         if not bDict:
@@ -335,6 +336,11 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                             msg = "skipping parent file not known to DBS: %s" % f
                             common.logger.info(msg)
                             file['parents'].remove(f)
+                            parentsToSkip.add(f)
+                    if f in parentsToSkip:
+                        msg = "skipping parent file not known to DBS: %s" % f
+                        common.logger.info(msg)
+                        if f in file['parents']: file['parents'].remove(f)
                 # add to list of files to be published
                 dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
@@ -373,7 +379,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
             files_to_publish = dbsFiles[count:count+blockSize]
             try:
                 block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
-                common.logger.debug("Inserting files %s into block %s." % ([i['logical_file_name'] for i in files_to_publish], block_name))
+                common.logger.debug("Inserting files %s into block %s" % ([i['logical_file_name'] for i in files_to_publish], block_name))
                 blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
                 common.logger.info("Publishing block %s with %d files"%(block_name, len(files_to_publish)))
                 destApi.insertBulkBlock(blockDump)
