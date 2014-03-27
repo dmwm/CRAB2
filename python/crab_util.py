@@ -911,7 +911,7 @@ def verify_dbs_url(self) :
         dbs_url = local_dbs3_03
 
     # if user asked for DBS3, remap DBS url if needed and possible
-    useDBS3 = self.cfg_params.get('CMSSW.use_dbs3', None)=='1'
+    useDBS3 = self.cfg_params.get('CMSSW.use_dbs3','1')=='1'
     if useDBS3  and dbs_url in known_dbs2_urls:
         dbs_url = dbs2to3 [dbs_url]
     # make sure all crab functions use this new DBS url:
@@ -938,7 +938,7 @@ def verify_dbs_url(self) :
         if dbs2_url in known_dbs2_urls:
             dbs3_url=dbs2to3[dbs2_url]
         else:
-            msg="No mapping to a DBS2 instance possible for dbs_url=%s"%dbs_url
+            msg="No mapping to a DBS3 instance possible for dbs_url=%s"%dbs_url
             common.logger.debug(msg)
             dbs3_url=None
     else:
