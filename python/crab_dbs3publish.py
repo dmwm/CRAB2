@@ -381,6 +381,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
                 common.logger.debug("Inserting files %s into block %s" % ([i['logical_file_name'] for i in files_to_publish], block_name))
                 blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
+                common.logger.debug("Block to insert:\n%s\n" % pprint.pformat(blockDump))
                 common.logger.info("Publishing block %s with %d files"%(block_name, len(files_to_publish)))
                 destApi.insertBulkBlock(blockDump)
                 count += blockSize
@@ -408,7 +409,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                     block_config = {'block_name': block_name, 'origin_site_name': originSite, 'open_for_writing': 0}
                     #common.logger.debug("Inserting files %s into block %s." % ([i['logical_file_name'] for i in files_to_publish], block_name))
                     blockDump = createBulkBlock(output_config, processing_era_config, primds_config, dataset_config, acquisition_era_config, block_config, files_to_publish)
-                    common.logger.debug("Block to insert: %s\n" % pprint.pformat(blockDump))
+                    common.logger.debug("Block to insert:\n%s\n" % pprint.pformat(blockDump))
                     common.logger.info("Publishing block %s with %d files"%(block_name, len(files_to_publish)))
                     destApi.insertBulkBlock(blockDump)
                         

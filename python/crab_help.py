@@ -795,12 +795,11 @@ Only the CE (Computing Element) whose name contains the following strings (comma
 
 =head3 B<se_black_list [glite,glidein,remoteGlidein]>
 
-All the SE (Storage Element) whose name contains the following strings (comma separated list) will not be considered for submission.It works only if a datasetpath is specified. You may use hostnames or CMS Site names (T2_DE_DESY) or substrings.
-By default T0 and T1s site are in blacklist. 
+Sites whose SE (Storage Element) whose name contains the following strings (comma separated list) will not be considered for submission. You may use hostnames or CMS Site names (T2_DE_DESY) or substrings. With glite scheduler it works only if a datasetpath is specified.
 
 =head3 B<se_white_list [glite,glidein,remoteGlidein]>
 
-Only the SE (Storage Element) whose name contains the following strings (comma separated list) will be considered for submission.It works only if a datasetpath is specified. Please note that if the selected CE(s) does not contain the data you want to access, no submission can take place. You may use hostnames or CMS Site names (T2_DE_DESY) or substrings.
+Only sites whose SE (Storage Element) whose name contains the following strings (comma separated list) will be considered for submission. If the selected CE(s) does not contain the data you want to access, no submission can take place. You may use hostnames or CMS Site names (T2_DE_DESY) or substrings.  With glite scheduler it works only if a datasetpath is specified.
 
 =head3 B<remove_default_blacklist [glite]>
 
