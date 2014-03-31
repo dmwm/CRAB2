@@ -267,6 +267,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         try:
             existingDBSFiles = destReadApi.listFiles(dataset=dbsDatasetPath)
             existingFiles = [x['logical_file_name'] for x in existingDBSFiles]
+            existingJobIds = [{f.split('_')[-3]:f} for f in existingFiles]
             results[datasetPath]['existingFiles'] = len(existingFiles)
         except Exception, ex:
             existingDBSFiles = []
@@ -316,6 +317,19 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
 
         for file in files:
             if not file['lfn'] in existingFiles:
+                # CHECK HERE IF THIS JOBID WAS ALREDY PUBLISHED
+                jobId = file['lfn'].split('_')[-3]
+                if jobId in existingJobIds.keys():
+                    existingLfn = existingJobIds[jobId]
+                    existingFile = dstReadApi.listFiles(logical_file_name=existingLfn,detail=True)
+                    if existinFile['is_file_valid'] :
+                        msg("A file was already published for Crab jobId %d") % jobId
+                        msg +="\ncurrent request to publish file %s will be ignored") % file['lfn']
+                        msg +="\nif you want to publish current file, you must first invalidate the exiting LFN %s\n") % existingJobIds[jobId]
+                        common.logger.info(msg)
+                        continue
+                    
+                    
                 # new file to publish, fill list of missing parent blocks
                 for f in list(file['parents']) : # iterate on a copy, so can change original
                     if not f in parentFiles :
