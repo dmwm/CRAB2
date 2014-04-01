@@ -326,9 +326,9 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                     existingLfn = existingJobIds[jobId]
                     existingFDict = destReadApi.listFiles(logical_file_name=existingLfn,detail=True)[0]
                     if existingFDict['is_file_valid'] :
-                        msg = "A file was already published for Crab jobId %d"%jobId
-                        msg +="\nWill ignore current request to publish file:\n%s"% file['lfn']
-                        msg +="\nIf you want to publish that file, you must first invalidate the exiting LFN:\n%s" % existingJobIds[jobId]
+                        msg = "WARNING: a file was already published for Crab jobId %d"%jobId
+                        msg +="\n      Crab will ignore current request to publish file:\n%s"% file['lfn']
+                        msg +="\n      If you want to publish that file, you must first invalidate the exiting LFN:\n%s" % existingJobIds[jobId]
                         common.logger.info(msg)
                         continue
                     
@@ -361,7 +361,6 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 # add to list of files to be published
                 dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
-            print "added to published: ", file['lfn']
 
         if localParentBlocks:
             msg="list of parent blocks that need to be migrated from %s:\n%s" % \
