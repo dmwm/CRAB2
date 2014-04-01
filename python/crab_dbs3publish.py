@@ -264,10 +264,13 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         common.logger.debug("Successfully inserting primary dataset %s" % primName)
 
         # Find any files already in the dataset so we can skip them
+        existingJobIds={}
         try:
             existingDBSFiles = destReadApi.listFiles(dataset=dbsDatasetPath)
             existingFiles = [x['logical_file_name'] for x in existingDBSFiles]
-            existingJobIds = [{f.split('_')[-3]:f} for f in existingFiles]
+            for f in existingFiles:
+                jobId = int(f.split('_')[-3]) # use Crab2 PFN rules
+                existingJobIds[jobId] = f
             results[datasetPath]['existingFiles'] = len(existingFiles)
         except Exception, ex:
             existingDBSFiles = []
@@ -318,14 +321,14 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         for file in files:
             if not file['lfn'] in existingFiles:
                 # CHECK HERE IF THIS JOBID WAS ALREDY PUBLISHED
-                jobId = file['lfn'].split('_')[-3]
+                jobId = int(file['lfn'].split('_')[-3])
                 if jobId in existingJobIds.keys():
                     existingLfn = existingJobIds[jobId]
-                    existingFile = dstReadApi.listFiles(logical_file_name=existingLfn,detail=True)
-                    if existinFile['is_file_valid'] :
-                        msg("A file was already published for Crab jobId %d") % jobId
-                        msg +="\ncurrent request to publish file %s will be ignored") % file['lfn']
-                        msg +="\nif you want to publish current file, you must first invalidate the exiting LFN %s\n") % existingJobIds[jobId]
+                    existingFDict = destReadApi.listFiles(logical_file_name=existingLfn,detail=True)[0]
+                    if existingFDict['is_file_valid'] :
+                        msg = "A file was already published for Crab jobId %d"%jobId
+                        msg +="\nWill ignore current request to publish file:\n%s"% file['lfn']
+                        msg +="\nIf you want to publish that file, you must first invalidate the exiting LFN:\n%s" % existingJobIds[jobId]
                         common.logger.info(msg)
                         continue
                     
@@ -358,6 +361,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 # add to list of files to be published
                 dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
+            print "added to published: ", file['lfn']
 
         if localParentBlocks:
             msg="list of parent blocks that need to be migrated from %s:\n%s" % \
