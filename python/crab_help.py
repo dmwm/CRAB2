@@ -595,7 +595,7 @@ To remove fileblock boundaries in job splitting specify I<no_block_boundary> = 1
 
 =head3 B<use_dbs3>
 
-To use DBS3 for data discovery: I<use_dbs3> = 1. Default value = 0. DBS2 local scope analysis_01/02 will be automatically mapped to DBS3 phys_01/02.
+To use DBS3 for data discovery: I<use_dbs3> = 1. Default value =1. DBS2 local scope analysis_01/02 will be automatically mapped to DBS3 phys_01/02.
 Alternatively use I<dbs_url> to indicate an explicit DBS3 endpoint
 
 =head3 B<verify_dbs23>
@@ -696,7 +696,7 @@ Default value = 0.
 
 You produced output will be published in your local DBS with dataset name <primarydataset>/<publish_data_name>/USER. No default value.
 
-=head3 B<dbs_url_for_publication>
+=head3 B<dbs_url_for_publication [obsolete]>
 
 Specify the URL of your local DBS istance where CRAB has to publish the output files. No default value.
 
