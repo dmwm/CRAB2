@@ -391,6 +391,7 @@ class DataDiscovery:
                 FileParentList=api.listFileParents(block_name=blockName)
                 for FileParentEntry in FileParentList:
                     lfn = FileParentEntry['logical_file_name']
+                    if not lfn in lfn2files: continue    # avoid invalid files
                     indx=lfn2files[lfn]  # ptr to this LFN info in the files structure
 
                     # need to turn this list of LFN's into a list of dict. for
@@ -409,6 +410,7 @@ class DataDiscovery:
             for lumidic in res:
                 lfn=lumidic['logical_file_name']
                 # add the info from this lumidic to files
+                if not lfn in lfn2files: continue    # avoid invalid files
                 indx=lfn2files[lfn]
                 run=lumidic['run_num']
                 for lumi in lumidic['lumi_section_num']:
