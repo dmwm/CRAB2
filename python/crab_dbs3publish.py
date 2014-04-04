@@ -236,6 +236,8 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         common.logger.info(msg)
 
     for datasetPath, files in toPublish.iteritems():
+        msg="%d files to publish in dataset %s" % (len(files),datasetPath)
+        common.logger.info(msg)
         results[datasetPath] = {'files': 0, 'blocks': 0, 'existingFiles': 0,}
         dbsDatasetPath = datasetPath
 
@@ -268,6 +270,8 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         try:
             existingDBSFiles = destReadApi.listFiles(dataset=dbsDatasetPath)
             existingFiles = [x['logical_file_name'] for x in existingDBSFiles]
+            msg = "This dataset already contains %d files" % len(existingFiles)
+            common.logger.info(msg)
             for f in existingFiles:
                 jobId = int(f.split('_')[-3]) # use Crab2 PFN rules
                 existingJobIds[jobId] = f
@@ -362,6 +366,13 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
 
+        msg="Found %d files not already present in DBS which will published" % len(dbsFiles)
+        common.logger.info(msg)
+
+        if len(dbsFiles) == 0:
+            common.logger.info("Nothing to do for this dataset")
+            continue
+
         if localParentBlocks:
             msg="list of parent blocks that need to be migrated from %s:\n%s" % \
                  (sourceApi.url, localParentBlocks)
@@ -446,8 +457,10 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         results[datasetPath]['blocks'] = blockCount
     published = filter(lambda x: x not in failed + publish_next_iteration, published)
     common.logger.debug("Results of publication step: results = %s" % results)
-    common.logger.info("Summary of file publication :  published %d, failed %d, still_to_publish %d" \
-                       % (len(published), len(failed), len(publish_next_iteration)))
+    # following msg is more misleading then useful, this has diverged enough
+    # from logic in the version used in Crab3 that different summary is needed
+    #common.logger.info("Summary of file publication :  published %d, failed %d, still_to_publish %d" \
+    #                   % (len(published), len(failed), len(publish_next_iteration)))
     return failed, published, results
 
 

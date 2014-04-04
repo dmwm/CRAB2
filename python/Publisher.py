@@ -362,6 +362,9 @@ class Publisher(Actor):
             status = '0'
             return status
 
+        common.logger.info("Task has %d jobs"%len(task.getJobs()))
+        common.logger.info("Found %d fjr's with exit code=0 to be considere for publication"%len(good_list))
+
         pubToDBS2 = False
         pubToDBS3 = True
         if  self.cfg_params.get('CMSSW.publish_dbs2',None)=="1":
