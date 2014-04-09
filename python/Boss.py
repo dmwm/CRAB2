@@ -50,6 +50,7 @@ class Boss:
                     'arc':      'SchedulerARC',\
                     'pbs':      'SchedulerPbs',\
                     'pbsv2':    'SchedulerPbsv2',\
+                    'slurm':    'SchedulerSlurm'\
                     }
 
         self.schedulerConfig = common.scheduler.realSchedParams(cfg_params)

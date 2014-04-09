@@ -50,6 +50,7 @@ class CopyData(Actor):
                          'REMOTEGLIDEIN'  : 'srm-lcg',
                          'SGE'      : 'srmv2',
                          'ARC'      : 'srmv2',
+                         'SLURM'  : 'srm-lcg',
                        }
         self.protocol = protocolDict[common.scheduler.name().upper()]
 
