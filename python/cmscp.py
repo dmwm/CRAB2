@@ -165,7 +165,7 @@ class cmscp:
         #############################
 
         supported_protocol = None
-        if middleware.lower() in ['osg','lcg','condor','sge','pbsv2']:
+        if middleware.lower() in ['osg','lcg','condor','sge','pbsv2', 'slurm']:
             supported_protocol = [('srm-lcg',lcgOpt[self.params['srm_version']])]#,\
                                #  (self.params['srm_version'],srmOpt[self.params['srm_version']])]
         #elif middleware.lower() in ['lsf','caf']:

@@ -39,7 +39,7 @@ class Cmssw(JobType):
         ### Temporary patch to automatically skip the ISB size check:
         self.server = self.cfg_params.get('CRAB.server_name',None) or \
                       self.cfg_params.get('CRAB.use_server',0)
-        self.local  = common.scheduler.name().upper() in ['LSF','CAF','CONDOR','SGE','PBS','PBSV2','ARC']
+        self.local  = common.scheduler.name().upper() in ['LSF','CAF','CONDOR','SGE','PBS','PBSV2','ARC', 'SLURM']
         size = 9.5
         if self.server or \
            common.scheduler.name().upper() == 'REMOTEGLIDEIN' :
@@ -751,7 +751,7 @@ class Cmssw(JobType):
         txt += self.wsSetupCMSLCGEnvironment_()
 
         #Setup PBS Environment
-        txt += 'elif [ $middleware == PBS ] || [ $middleware == PBSV2 ]; then\n'
+        txt += 'elif [ $middleware == PBS ] || [ $middleware == PBSV2 ] || [ $middleware == SLURM ]; then\n'
         txt += self.wsSetupCMSLCGEnvironment_()
 
         txt += 'fi\n'
