@@ -23,8 +23,6 @@ The most useful general options (use '-h' to get complete help):
   -status                                 -- check status of all jobs.
   -getoutput|-get [range]                 -- get back the output of all jobs: if range is defined, only of selected jobs.
   -publish                                -- after the getouput, publish the data user in a local DBS instance.
-  -publishNoInp                           -- after the getoutput, publish the data user in the local DBS instance removing input data file
-  -checkPublication [dbs_url datasetpath] -- checks if a dataset is published in a DBS.
   -kill [range]                           -- kill submitted jobs.
   -resubmit range or all                  -- resubmit killed/aborted/retrieved jobs.
   -forceResubmit range or all             -- resubmit jobs regardless to their status.
