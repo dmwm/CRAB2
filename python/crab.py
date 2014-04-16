@@ -725,9 +725,7 @@ class Crab:
                 self.actions[opt] = Publisher(self.cfg_params)
 
             elif ( opt == '-checkPublication' ):
-                from InspectDBS import InspectDBS
-                self.actions[opt] = InspectDBS(self.cfg_params)
-
+                common.logger.info("WARNING: -checkPublicatin is deprecated : puse DAS to check on your dataset\n")
             elif ( opt == '-copyData' ):
                 if val =='all' or val == None or val == '':
                     jobs = common._db.nJobs("list")
