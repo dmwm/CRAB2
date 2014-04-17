@@ -24,7 +24,7 @@ class SchedulerLsf(SchedulerLocal) :
     def configure(self, cfg_params):
         SchedulerLocal.configure(self, cfg_params)
         self.outputDir = cfg_params.get('USER.outputdir' ,common.work_space.resDir())
-        self.res = cfg_params.get(self.name().upper()+'.resource','"type==SLC5_64 || type==SLC4_64"')
+        self.res = cfg_params.get(self.name().upper()+'.resource','"type==SLC5_64 || type==SLC6_64"')
 
         self.pool = cfg_params.get('USER.storage_pool',None)
         return
