@@ -1,3 +1,4 @@
+
 from Actor import *
 import common
 import string, os, time
@@ -274,7 +275,7 @@ class Status(Actor):
             msg +=  " >>>>>>>>> %i Jobs with Wrapper Exit Code : %s \n" % (len(list_ID), str(code))
             msg +=  "\t List of jobs: %s \n" % readableList(self,list_ID)
             if (code!=0):
-                msg +=  "\tSee https://twiki.cern.ch/twiki/bin/view/CMS/JobExitCodes for Exit Code meaning\n"
+                msg +=  "\tSee https://twiki.cern.ch/twiki/bin/view/CMSPublic/JobExitCodes for Exit Code meaning\n"
             msg +=Color.end
 
         common.logger.info(msg)
