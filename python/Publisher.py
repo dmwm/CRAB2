@@ -347,15 +347,26 @@ class Publisher(Actor):
         task = common._db.getTask()
         good_list=[]   # list of fjr's to publish
 
+        common.logger.info("Listing crab_fjr files")
+        nj=0
         for job in task.getJobs():
+            nj += 1
+            if nj%100 == 0 :
+                common.logger.info("checking job %d" % nj)
             fjr = self.fjrDirectory + job['outputFiles'][-1]
             if (job.runningJob['applicationReturnCode']!=0 or job.runningJob['wrapperReturnCode']!=0): continue
             # get FJR filename
             fjr = self.fjrDirectory + job['outputFiles'][-1]
             reports = readJobReport(fjr)
-            if len(reports)>0:
-               if reports[0].status == "Success":
-                  good_list.append(fjr)
+            if len(reports)>0 and reports[0].status == "Success":
+                goodReport = True
+                #sanity check 1 : is there at least one run  ?
+                for outFile in reports[0].files:
+                    if len(outFile['Runs']) == 0 :
+                        common.logger.info("ERROR NO RUN. SKIP FILE")
+                        goodReport = False
+                if not goodReport: continue
+                good_list.append(fjr)
 
         if len(good_list) == 0:
             common.logger.info("No fjr with exit code =0 to be published")
@@ -382,6 +393,8 @@ class Publisher(Actor):
             destReadApi  = argsForDbs3['destReadApi']
             migrateApi   = argsForDbs3['migrateApi']
             originSite   = argsForDbs3['origin_site_name']
+            print "SB about to call publishInDBS3"
+            print toPublish
             (failed,published,results) = publishInDBS3(\
                 sourceApi, globalApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
             if len(failed) == 0:
@@ -394,6 +407,7 @@ class Publisher(Actor):
         return status
 
     def PrepareForDBS3Publish(self,good_list):
+        print "SB in PrepareForDBS3Publish"
         from dbs.apis.dbsClient import DbsApi as Dbs3Api
         from ProdCommon.FwkJobRep.ReportParser import readJobReport
 
@@ -450,13 +464,20 @@ class Publisher(Actor):
         
         toPublish={}
 
+        common.logger.info("parsing crab_fjr files")
+        nfjr=0
         for crabFjr in good_list:                 # this is the list of FJR's in crab res
             fjr=readJobReport(crabFjr)[0]         # parse into python
+            nfjr += 1
+            if nfjr%100 == 0:
+                common.logger.info ("parsed %d fjr files" %nfjr)
             if not fjr.files:
                 msg = "WARNING: No EDM file to be published in %s" % crabFjr.split('/')[-1]
                 common.logger.info(msg)
 
             for outFile in fjr.files:             # one fjr may have multiple output LFN's
+                print "SB UNO"
+                print outFile
                 dset_info=outFile.dataset[0]      # better there is only one dataset per file !
                 procds=dset_info['ProcessedDataset']
                 primds=dset_info['PrimaryDataset']
