@@ -363,7 +363,7 @@ class Publisher(Actor):
                 #sanity check 1 : is there at least one run  ?
                 for outFile in reports[0].files:
                     if len(outFile['Runs']) == 0 :
-                        common.logger.info("ERROR NO RUN. SKIP FILE")
+                        common.logger.info("ERROR NO RUN. SKIP FILE %s" % fjr)
                         goodReport = False
                 if not goodReport: continue
                 good_list.append(fjr)
