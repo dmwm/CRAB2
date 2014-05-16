@@ -360,10 +360,11 @@ class Publisher(Actor):
             reports = readJobReport(fjr)
             if len(reports)>0 and reports[0].status == "Success":
                 goodReport = True
-                #sanity check 1 : is there at least one run  ?
+                # sanity check : is there at least one run  ?
                 for outFile in reports[0].files:
                     if len(outFile['Runs']) == 0 :
-                        common.logger.info("ERROR NO RUN. SKIP FILE %s" % fjr)
+                        msg="ERROR: no run/lumi info. Skip FJR file %s" % fjr
+                        common.logger.info(msg)
                         goodReport = False
                 if not goodReport: continue
                 good_list.append(fjr)
