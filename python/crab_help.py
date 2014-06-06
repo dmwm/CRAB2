@@ -23,8 +23,6 @@ The most useful general options (use '-h' to get complete help):
   -status                                 -- check status of all jobs.
   -getoutput|-get [range]                 -- get back the output of all jobs: if range is defined, only of selected jobs.
   -publish                                -- after the getouput, publish the data user in a local DBS instance.
-  -publishNoInp                           -- after the getoutput, publish the data user in the local DBS instance removing input data file
-  -checkPublication [dbs_url datasetpath] -- checks if a dataset is published in a DBS.
   -kill [range]                           -- kill submitted jobs.
   -resubmit range or all                  -- resubmit killed/aborted/retrieved jobs.
   -forceResubmit range or all             -- resubmit jobs regardless to their status.
@@ -443,18 +441,13 @@ Mandatory parameters are flagged with a *.
 The type of the job to be executed: I<cmssw> jobtypes are supported. No default value.
 
 =head3 B<scheduler *>
-The scheduler to be used: <glite> or I<condor_g> (see specific paragraph) Grid schedulers to be used with glite or osg middleware. In addition, there's an I<arc> scheduler to be used with the NorduGrid ARC middleware.
-From version 210, also local scheduler are supported, for the time being only at CERN. I<LSF> is the standard CERN local scheduler or I<CAF> which is LSF dedicated to CERN Analysis Facilities. I<condor> is the scheduler to submit jobs to US LPC CAF. No default value.
+
+The scheduler to be used: <remoteglidein> is the schedulers to be used for grid submission. Some local scheduler are supported by the community. I<LSF> is the standard CERN local scheduler or I<CAF> which is LSF dedicated to CERN Analysis Facilities. I<condor> is the scheduler to submit jobs to US LPC CAF, or I<arc> scheduler to be used with the NorduGrid ARC middleware. No default value.
 
 =head3 B<use_server>
 
-To use the server for job handling (recommended) 0=no (default), 1=true. The server to be used will be found automatically from a list of available ones: it can also be specified explicitly by using I<server_name> (see below). The server usage is compulsory for task with a number of created jobs > 500. Default value = 0.
+To use the server for job handling. Only 0=no (default) is supported. This parameter should not be used.
 
-=head3 B<server_name>
-
-To use the CRAB-server support it is needed to fill this key with server name as <Server_DOMAIN> (e.g. cnaf,fnal). If this is set, I<use_server> is set to true automatically.
-If I<server_name=None> crab works in standalone way, same as using I<use_server=0> and no I<server_name>.
-The server available to users can be found from CRAB web page. No default value.
 
 =head2 B<[CMSSW]>
 

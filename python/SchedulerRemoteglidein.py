@@ -156,6 +156,7 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         scramArch  = scram.getArch()
         
         cmsver=re.split('_', cmsVersion)
+        if cmsver[3]=='DEVEL': cmsver[3]='0'
         numericCmsVersion = "%s%.2d%.2d" %(cmsver[1], int(cmsver[2]), int(cmsver[3]))
 
         if "slc5" in scramArch:
