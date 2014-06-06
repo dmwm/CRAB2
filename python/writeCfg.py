@@ -67,7 +67,6 @@ def main(argv) :
         parts = CMSSW.split('_')
         CMSSW_major = int(parts[1])
         CMSSW_minor = int(parts[2])
-        CMSSW_patch = int(parts[3])
     except (KeyError, ValueError):
         msg = "Your environment doesn't specify the CMSSW version or specifies it incorrectly"
         raise ConfigException(msg)

@@ -275,7 +275,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
             msg = "This dataset already contains %d files" % len(existingFiles)
             common.logger.info(msg)
             for lfn in existingFiles:
-                outputfile = lfn.rsplit('_',2)   # use Crab2 PFN rules
+                outputfile = lfn.rsplit('_',2)[0]   # use Crab2 PFN rules
                 existingJobOutputs[outputfile] = lfn
             results[datasetPath]['existingFiles'] = len(existingFiles)
         except Exception, ex:
@@ -328,7 +328,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
             newLfn = file['lfn']
             if not newLfn in existingFiles:
                 # CHECK HERE IF THIS JOB OUTPUT WAS ALREDY PUBLISHED
-                jobOutputName = newLfn.rsplit('_',2)
+                jobOutputName = newLfn.rsplit('_',2)[0]
                 if jobOutputName in existingJobOutputs.keys():
                     existingLfn = existingJobOutputs[jobOutputName]
                     existingFDict = destReadApi.listFiles(logical_file_name=existingLfn,detail=True)[0]
