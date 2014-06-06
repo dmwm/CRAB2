@@ -75,6 +75,7 @@ class Cmssw(JobType):
         try:
             self.CMSSW_major = int(version_array[1])
             self.CMSSW_minor = int(version_array[2])
+            if version_array[3]=='DEVEL' : version_array[3]='0'
             self.CMSSW_patch = int(version_array[3])
         except:
             msg = "Cannot parse CMSSW version string: " + self.version + " for major and minor release number!"
