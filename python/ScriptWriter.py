@@ -40,6 +40,7 @@ class ScriptWriter:
             parts = self.CMSSWversion.split('_')
             self.CMSSW_major = int(parts[1])
             self.CMSSW_minor = int(parts[2])
+            if parts[3]=='DEVEL' : parts[3]='0'
             self.CMSSW_patch = int(parts[3])
         except:
             raise CrabException("Could not determine CMSSW version")
