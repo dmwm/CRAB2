@@ -266,15 +266,17 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         common.logger.debug("Successfully inserting primary dataset %s" % primName)
 
         # Find any files already in the dataset so we can skip them
-        existingJobIds={}
+        # Also avoid files that only differ in resubmission counter or numeric hash
+        # as they would be from resubmssion of same job in same task
+        existingJobOutputs={}
         try:
             existingDBSFiles = destReadApi.listFiles(dataset=dbsDatasetPath)
             existingFiles = [x['logical_file_name'] for x in existingDBSFiles]
             msg = "This dataset already contains %d files" % len(existingFiles)
             common.logger.info(msg)
-            for f in existingFiles:
-                jobId = int(f.split('_')[-3]) # use Crab2 PFN rules
-                existingJobIds[jobId] = f
+            for lfn in existingFiles:
+                outputfile = lfn.rsplit('_',2)   # use Crab2 PFN rules
+                existingJobOutputs[outputfile] = lfn
             results[datasetPath]['existingFiles'] = len(existingFiles)
         except Exception, ex:
             existingDBSFiles = []
@@ -323,16 +325,17 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
         globalParentBlocks=set()
 
         for file in files:
-            if not file['lfn'] in existingFiles:
-                # CHECK HERE IF THIS JOBID WAS ALREDY PUBLISHED
-                jobId = int(file['lfn'].split('_')[-3])
-                if jobId in existingJobIds.keys():
-                    existingLfn = existingJobIds[jobId]
+            newLfn = file['lfn']
+            if not newLfn in existingFiles:
+                # CHECK HERE IF THIS JOB OUTPUT WAS ALREDY PUBLISHED
+                jobOutputName = newLfn.rsplit('_',2)
+                if jobOutputName in existingJobOutputs.keys():
+                    existingLfn = existingJobOutputs[jobOutputName]
                     existingFDict = destReadApi.listFiles(logical_file_name=existingLfn,detail=True)[0]
                     if existingFDict['is_file_valid'] :
                         msg = "WARNING: a file was already published for Crab jobId %d"%jobId
                         msg +="\n      Crab will ignore current request to publish file:\n%s"% file['lfn']
-                        msg +="\n      If you want to publish that file, you must first invalidate the exiting LFN:\n%s" % existingJobIds[jobId]
+                        msg +="\n      If you want to publish that file, you must first invalidate the existing LFN:\n%s" % existingJobIds[jobId]
                         common.logger.info(msg)
                         continue
                     
