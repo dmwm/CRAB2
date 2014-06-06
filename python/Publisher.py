@@ -394,8 +394,6 @@ class Publisher(Actor):
             destReadApi  = argsForDbs3['destReadApi']
             migrateApi   = argsForDbs3['migrateApi']
             originSite   = argsForDbs3['origin_site_name']
-            print "SB about to call publishInDBS3"
-            print toPublish
             (failed,published,results) = publishInDBS3(\
                 sourceApi, globalApi, inputDataset, toPublish, destApi, destReadApi, migrateApi, originSite)
             if len(failed) == 0:
@@ -408,7 +406,6 @@ class Publisher(Actor):
         return status
 
     def PrepareForDBS3Publish(self,good_list):
-        print "SB in PrepareForDBS3Publish"
         from dbs.apis.dbsClient import DbsApi as Dbs3Api
         from ProdCommon.FwkJobRep.ReportParser import readJobReport
 
@@ -477,8 +474,6 @@ class Publisher(Actor):
                 common.logger.info(msg)
 
             for outFile in fjr.files:             # one fjr may have multiple output LFN's
-                print "SB UNO"
-                print outFile
                 dset_info=outFile.dataset[0]      # better there is only one dataset per file !
                 procds=dset_info['ProcessedDataset']
                 primds=dset_info['PrimaryDataset']
