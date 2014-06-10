@@ -462,13 +462,13 @@ class Publisher(Actor):
         
         toPublish={}
 
-        common.logger.info("parsing crab_fjr files")
+        common.logger.info("parsing crab_fjr files...")
         nfjr=0
         for crabFjr in good_list:                 # this is the list of FJR's in crab res
             fjr=readJobReport(crabFjr)[0]         # parse into python
             nfjr += 1
             if nfjr%100 == 0:
-                common.logger.info ("parsed %d fjr files" %nfjr)
+                common.logger.info ("parsed %d crab_fjr files..." %nfjr)
             if not fjr.files:
                 msg = "WARNING: No EDM file to be published in %s" % crabFjr.split('/')[-1]
                 common.logger.info(msg)
@@ -512,6 +512,7 @@ class Publisher(Actor):
 
 
         # all done
+        common.logger.info("parsing of crab_fjr files completed")
         argsForDbs3 = { \
             'sourceApi' : sourceApi,
             'globalApi' : globalApi,

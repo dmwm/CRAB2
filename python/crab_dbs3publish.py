@@ -333,9 +333,10 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                     existingLfn = existingJobOutputs[jobOutputName]
                     existingFDict = destReadApi.listFiles(logical_file_name=existingLfn,detail=True)[0]
                     if existingFDict['is_file_valid'] :
-                        msg = "WARNING: a file was already published for Crab jobId %d"%jobId
+                        jobId = int(existingLfn.rsplit('_',3)[1])
+                        msg = "WARNING: a file was already published for Crab jobId %d in same task"%jobId
                         msg +="\n      Crab will ignore current request to publish file:\n%s"% file['lfn']
-                        msg +="\n      If you want to publish that file, you must first invalidate the existing LFN:\n%s" % existingJobIds[jobId]
+                        msg +="\n      If you want to publish that file, you must first invalidate the existing LFN:\n%s" % existingLfn
                         common.logger.info(msg)
                         continue
                     
@@ -369,7 +370,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
 
-        msg="Found %d files not already present in DBS which will published" % len(dbsFiles)
+        msg="Found %d files not already present in DBS which will be published" % len(dbsFiles)
         common.logger.info(msg)
 
         if len(dbsFiles) == 0:
