@@ -370,7 +370,7 @@ def publishInDBS3(sourceApi, globalApi, inputDataset, toPublish, destApi, destRe
                 dbsFiles.append(format_file_3(file))
             published.append(file['lfn'])
 
-        msg="Found %d files not already present in DBS which will published" % len(dbsFiles)
+        msg="Found %d files not already present in DBS which will be published" % len(dbsFiles)
         common.logger.info(msg)
 
         if len(dbsFiles) == 0:
