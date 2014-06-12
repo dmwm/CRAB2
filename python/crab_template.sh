@@ -236,7 +236,7 @@ echo "ExeTime=$TIME_EXE" >> $RUNTIME_AREA/$repo
 exeOutLines=`wc -l executable.out | awk '{print $1'}`
 echo ">>> $executable wrote $exeOutLines lines of stdout+stderr"
 echo ">>> START OF printout of $exeOutLines lines from stdout+stderr"
-if [ $exeOutLines -gt 3000 ]
+if [ $exeOutLines -gt 4000 ]
 then
   echo ">>> print out only first 1000 and last 3000 lines:"
   head -1000 executable.out; echo ""; echo ">>>[...BIG SNIP...]";echo "";tail -3000 executable.out
