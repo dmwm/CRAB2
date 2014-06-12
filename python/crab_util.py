@@ -492,7 +492,7 @@ def getDN():
     extract DN from user proxy's identity
     """
     try:
-        userdn = runCommand("voms-proxy-info -identity")
+        userdn = runCommand("eval `scram unsetenv -sh`; voms-proxy-info -identity")
         userdn = string.strip(userdn)
         #remove /CN=proxy that could cause problems with siteDB check at server-side
         userdn = userdn.replace('/CN=proxy','') 

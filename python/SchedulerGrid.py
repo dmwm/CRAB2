@@ -374,7 +374,7 @@ class SchedulerGrid(Scheduler):
 
     def userName(self):
         """ return the user name """
-        tmp=runCommand("voms-proxy-info -identity 2>/dev/null")
+        tmp=runCommand("eval `scram unsetenv -sh`; voms-proxy-info -identity 2>/dev/null")
         return tmp.strip()
 
     def configOpt_(self):

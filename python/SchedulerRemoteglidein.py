@@ -98,7 +98,7 @@ class SchedulerRemoteglidein(SchedulerGrid) :
 
 
         # make sure proxy FQAN has not changed since last time
-        command =  "voms-proxy-info -identity -fqan 2>/dev/null"
+        command =  "eval `scram unsetenv -sh`; voms-proxy-info -identity -fqan 2>/dev/null"
         command += " | head -2"
         identity = runCommand(command)
         idfile = common.work_space.shareDir() + "GridIdentity"
