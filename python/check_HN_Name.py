@@ -1,3 +1,4 @@
+#!/
 class check_HN_name:
     def init(self): 
         pass
@@ -6,27 +7,24 @@ class check_HN_name:
  
         import urllib
         import commands
+        import os
         print 'start standalone check ...\n'
-        status, dn = commands.getstatusoutput('voms-proxy-info -identity')
+        # direct stderr from voms-proxy-* to dev/null to avoid stupid Java messages :-(
+        status, dn = commands.getstatusoutput('eval `scram unsetenv -sh`; voms-proxy-info -identity 2>/dev/null')
         if status == 0:
            print "my DN is: %s \n"%dn
-        dn = dn.split('\n')[-1]
-        dn  = urllib.urlencode({'dn':dn})
-        print 'Using urlencoded DN: \n\t %s '%dn
-        try:
-            f = urllib.urlopen("https://cmsweb.cern.ch/sitedb/json/index/dnUserName?%s" % dn)
-            username = str(f.read())
-            f.close()
-        except:
-            print "failed to get username via SiteDB V1 API"
-            username="None"
+        status, proxyFile = commands.getstatusoutput('eval `scram unsetenv -sh`; voms-proxy-info -path 2>/dev/null')
+        if not status == 0:
+            print 'ERROR getting proxy path'
+        os.environ['X509_USER_PROXY'] = proxyFile
+        if not 'X509_CERT_DIR' in os.environ:
+            os.environ['X509_CERT_DIR'] = '/etc/grid-security/certificates'
 
         cmd = "curl -s  --capath $X509_CERT_DIR --cert $X509_USER_PROXY --key $X509_USER_PROXY 'https://cmsweb.cern.ch/sitedb/data/prod/whoami'|tr ':,' '\n'|grep -A1 login|tail -1"
 
-        status, uname = commands.getstatusoutput(cmd)
+        status, username = commands.getstatusoutput(cmd)
         
-        print 'v1: my HN user name is: %s' % username
-        print 'v2: my HN user name is: %s' % uname
+        print 'my HN user name is: %s' % username
         print '\nend check.....................'
 
     def crabCheck(self):
