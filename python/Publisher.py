@@ -502,7 +502,7 @@ class Publisher(Actor):
                     if outFile['SEName'] != originSite:
                         msg = "ERROR: not all files to be published have same location"
                         msg += "file %s has origin %s, while previous files have %s\n" %\
-                            outFile['LFN'], outFile['SEName'], originSite
+                            (outFile['LFN'], outFile['SEName'], originSite)
                         raise CrabException(msg)
                 else:
                     originSite = outFile['SEName']
