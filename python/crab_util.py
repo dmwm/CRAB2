@@ -886,8 +886,8 @@ def verify_dbs_url(self) :
     dbs3to2[local_dbs2_01] = local_dbs2_01
     dbs3to2[local_dbs2_02] = local_dbs2_02
 
-    ## get DBS URL specified by user (default to global DBS2)
-    dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs2)
+    ## get DBS URL specified by user (default to global DBS3)
+    dbs_url = self.cfg_params.get('CMSSW.dbs_url', global_dbs3)
 
     # support shortcuts for local scope DBS's
     if dbs_url == "dbs2_caf_01" :  dbs_url=caf_dbs2_01
