@@ -775,7 +775,7 @@ Maximum CPU time needed to finish one job. It is not recommended, better use onl
 
 =head3 B<max_rss [remoteGlidein]>
 
-Maximum Resident Set Size (memory)  needed for one job. It will be used to select a suitable queue on the CE and to adjust the crab watchdog. Memory need in Mbytes. Default value = 2300
+Maximum Resident Set Size (memory)  needed for one job. It will be used to select a suitable queue on the CE and to adjust the crab watchdog. Memory need in Mbytes. Default value = 2300. Only works if used in crab confifuration file. Can not be overridden via command line in later crab commands. 
 
 =head3 B<ce_black_list [glite]>
 
