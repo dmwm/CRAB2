@@ -26,7 +26,7 @@ class DataLocation:
         self.cfg_params = cfg_params
 
         self.SelectedSites = {}        # DLS output: list of sites hosting fileblocks
-                                       #  retrieved using method getSites
+                                       # can be retrieved using method getSites
 
 # #######################################################################
     def fetchDLSInfo(self):
@@ -39,33 +39,26 @@ class DataLocation:
 
         # make assumption that same host won't be used for both
         # this check should catch most deployed servers
-        DBS2HOST = 'cmsdbsprod.cern.ch'
-        DBS3HOST = 'cmsweb.cern.ch'
-        (isDbs2, isDbs3, dbs2_url, dbs3_url) = verify_dbs_url(self)
-        if isDbs2: dbs_url=dbs2_url
-        if isDbs3: dbs_url=dbs3_url
 
-        global_dbs2 = "http://cmsdbsprod.cern.ch/cms_dbs_prod_global/servlet/DBSServlet"
+        (isDbs2, isDbs3, dbs2_url, dbs3_url) = verify_dbs_url(self)
+        dbs_url=dbs3_url
+
         global_dbs3 = "https://cmsweb.cern.ch/dbs/prod/global/DBSReader"
 
-        if dbs_url==global_dbs2 or dbs_url==global_dbs3:
-            # global DBS has no location info
-            DLS_type="DLS_TYPE_PHEDEX"
-            dls=DLSInfo(DLS_type,self.cfg_params)
-            blockSites = dls.getReplicasBulk(self.Listfileblocks)
+        # first try PhEDEx
+        DLS_type="DLS_TYPE_PHEDEX"
+        dls=DLSInfo(DLS_type,self.cfg_params)
+        blockSites = dls.getReplicasBulk(self.Listfileblocks)
+        OK = len(blockSites)>0   # who knows if this is the right test 
+        if OK:
+            pass # no problem
         else:
             # assume it is some local scope DBS
-            if isDbs2:
-                DLS_type="DLS_TYPE_DBS"
-                dls=DLSInfo(DLS_type,self.cfg_params)
-                blockSites = self.PrepareDict(dls)
-            else:
-                # assume it is some DBS3 end point
-                try:
-                    blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
-                except:
-                    msg = "CAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
-                    raise CrabException(msg)
+            try:
+                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
+            except:
+                msg = "CAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
+                raise CrabException(msg)
 
         self.SelectedSites = blockSites
 
@@ -89,48 +82,9 @@ class DataLocation:
         return blockSites
 
 # #######################################################################
-
-    def PrepareDict(self,dls):
-        ## find the replicas for each block
-        failCount = 0
-        countblock=0
-        blockSites = {}
-        for fileblocks in self.Listfileblocks:
-            countblock=countblock+1
-            try:
-                replicas=dls.getReplicas(fileblocks)
-                common.logger.debug("sites are %s"%replicas)
-                if len(replicas)!=0:
-                    blockSites[fileblocks] = replicas
-                else:
-                    # add empty entry if no replicas found
-                    blockSites[fileblocks] = ''
-
-            except DLSNoReplicas, ex:
-                common.logger.debug(str(ex.getErrorMessage()))
-                common.logger.debug("Block not hosted by any site, continuing.\n")
-                blockSites[fileblocks] = ''
-                failCount = failCount + 1
-            except:
-                raise CrabException('')
-
-        if countblock == failCount:
-            msg = "All data blocks encountered a DLS error.  Quitting."
-            raise CrabException(msg)
-        return blockSites
-# #######################################################################
     def getSites(self):
         """
         get the sites hosting all the needed data
         """
         return self.SelectedSites
 
-#######################################################################
-    def uniquelist(self, old):
-        """
-        remove duplicates from a list
-        """
-        nd={}
-        for e in old:
-            nd[e]=0
-        return nd.keys()
