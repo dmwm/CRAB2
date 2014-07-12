@@ -795,9 +795,7 @@ def schedulerGlite():
         if out.strip().startswith('3.1'):
             scheduler = 'SchedulerGLiteAPI'
         else:
-            scheduler = 'SchedulerGLite'    
-    else:
-        common.logger.info("error detecting glite version ")
+            scheduler = 'SchedulerGLite'
 
     return scheduler
 
