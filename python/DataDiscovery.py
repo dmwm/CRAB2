@@ -117,29 +117,13 @@ class DataDiscovery:
         # this check should catch most deployed servers
 
         (useDBS2, useDBS3, dbs2_url, dbs3_url) = verify_dbs_url(self)
-        if useDBS2: dbs_url=dbs2_url
-        if useDBS3: dbs_url=dbs3_url
+        # DBS2 is gone
+        dbs_url=dbs3_url
+        useDBS2 = False
+        useDBS3 = True
         verifyDBS23 = False
-        useDAS = False
 
-        if self.cfg_params.get('CMSSW.verify_dbs23'):
-            verifyDBS23 = int(self.cfg_params.get('CMSSW.verify_dbs23'))==1
-
-        if verifyDBS23 and not (dbs2_url and dbs3_url) :
-            common.logger.info ("automatic verification DBS2/3 not possible for dbs_url=%s"%dbs_url)
-            verifyDBS23 = False
-
-        common.logger.info("Accessing DBS at: "+dbs_url)
-
-        if useDBS2:
-            common.logger.info("Will do Data Discovery using  DBS2")
-        if useDBS3:
-            common.logger.info("Will do Data Discovery using  DBS3")
-        if useDAS :
-            common.logger.info("will use DAS to talk to DBS")
-        if verifyDBS23:
-            common.logger.info("Will verify that DBS2 and DBS3 return same information")
-
+        common.logger.info("Accessing DBS at: %s" % dbs_url)
 
         ## check if runs are selected
         runselection = []
@@ -212,13 +196,7 @@ class DataDiscovery:
             common.logger.info("DBS3 lookup took %5.2f sec" % elapsed)
             if useDBS3:
                 self.files = files3
-        if useDAS :
-            self.files = self.queryDas(path=self.datasetPath,runselection=runselection,useParent=useparent)
 
-        if verifyDBS23:
-            if not self.compareFilesStructure(files2,files3):
-                common.logger.info("ERROR: DBS2 - DB3 comparison failed, please run crab -uploadLog and report to crabFeedback")
-        
 
         # Check to see what the dataset is
         pdsName = self.datasetPath.split("/")[1]
@@ -292,51 +270,6 @@ class DataDiscovery:
         if len(self.eventsPerBlock) <= 0:
             msg="No data for %s in DBS\n Check datasetpath parameter in crab.cfg" % self.datasetPath
             raise  CrabException(msg)
-
-
-    def queryDbs(self,api,path=None,runselection=None,useParent=None):
-
-
-        allowedRetriveValue = []
-        if self.splitByLumi or self.splitByRun or useParent == 1:
-            allowedRetriveValue.extend(['retrive_block', 'retrive_run'])
-        #if self.splitByLumi:
-        #    allowedRetriveValue.append('retrive_lumi')
-        allowedRetriveValue.append('retrive_lumi')
-        if useParent == 1:
-            allowedRetriveValue.append('retrive_parent')
-        common.logger.debug("Set of input parameters used for DBS query: %s" % allowedRetriveValue)
-        try:
-            if self.splitByRun:
-                files = []
-                for arun in runselection:
-                    try:
-                        if self.ads:
-                            filesinrun = api.listFiles(analysisDataset=path,retriveList=allowedRetriveValue,runNumber=arun)
-                        else:
-                            filesinrun = api.listFiles(path=path,retriveList=allowedRetriveValue,runNumber=arun)
-                        files.extend(filesinrun)
-                    except:
-                        msg="WARNING: problem extracting info from DBS for run %s "%arun
-                        common.logger.info(msg)
-                        pass
-
-            else:
-                if allowedRetriveValue:
-                    if self.ads:
-                        files = api.listFiles(analysisDataset=path, retriveList=allowedRetriveValue)
-                    else :
-                        files = api.listFiles(path=path, retriveList=allowedRetriveValue)
-                else:
-                    files = api.listDatasetFiles(self.datasetPath)
-
-        except DbsBadRequest, e:
-            raise CrabException(str(e))
-        except DBSError, e:
-            raise CrabException(str(e))
-
-        
-        return files
 
 
     def queryDbs3(self,api,path=None,runselection=None,useParent=None):
@@ -423,6 +356,110 @@ class DataDiscovery:
         #common.logger.info("DBS3 IS RETURNING FILES OF LENGTH %s" % len(files))
 
         return files
+
+
+    def getMaxEvents(self):
+        """
+        max events
+        """
+        return self.maxEvents
+
+
+    def getMaxLumis(self):
+        """
+        Return the number of lumis in the dataset
+        """
+        return self.maxLumis
+
+
+    def getEventsPerBlock(self):
+        """
+        list the event collections structure by fileblock
+        """
+        return self.eventsPerBlock
+
+
+    def getEventsPerFile(self):
+        """
+        list the event collections structure by file
+        """
+        return self.eventsPerFile
+
+
+    def getFiles(self):
+        """
+        return files grouped by fileblock
+        """
+        return self.blocksinfo
+
+
+    def getParent(self):
+        """
+        return parent grouped by file
+        """
+        return self.parent
+
+
+    def getLumis(self):
+        """
+        return lumi sections grouped by file
+        """
+        return self.lumis
+
+
+    def getListFiles(self):
+        """
+        return parent grouped by file
+        """
+        return self.files
+
+######### OBSOLETE #############
+
+    def queryDbs(self,api,path=None,runselection=None,useParent=None):
+
+
+        allowedRetriveValue = []
+        if self.splitByLumi or self.splitByRun or useParent == 1:
+            allowedRetriveValue.extend(['retrive_block', 'retrive_run'])
+        #if self.splitByLumi:
+        #    allowedRetriveValue.append('retrive_lumi')
+        allowedRetriveValue.append('retrive_lumi')
+        if useParent == 1:
+            allowedRetriveValue.append('retrive_parent')
+        common.logger.debug("Set of input parameters used for DBS query: %s" % allowedRetriveValue)
+        try:
+            if self.splitByRun:
+                files = []
+                for arun in runselection:
+                    try:
+                        if self.ads:
+                            filesinrun = api.listFiles(analysisDataset=path,retriveList=allowedRetriveValue,runNumber=arun)
+                        else:
+                            filesinrun = api.listFiles(path=path,retriveList=allowedRetriveValue,runNumber=arun)
+                        files.extend(filesinrun)
+                    except:
+                        msg="WARNING: problem extracting info from DBS for run %s "%arun
+                        common.logger.info(msg)
+                        pass
+
+            else:
+                if allowedRetriveValue:
+                    if self.ads:
+                        files = api.listFiles(analysisDataset=path, retriveList=allowedRetriveValue)
+                    else :
+                        files = api.listFiles(path=path, retriveList=allowedRetriveValue)
+                else:
+                    files = api.listDatasetFiles(self.datasetPath)
+
+        except DbsBadRequest, e:
+            raise CrabException(str(e))
+        except DBSError, e:
+            raise CrabException(str(e))
+
+        
+        return files
+
+
 
     def compareFilesStructure(self, f2, f3):
         """
@@ -527,59 +564,3 @@ class DataDiscovery:
         return compareStatus
 
 
-
-
-    def getMaxEvents(self):
-        """
-        max events
-        """
-        return self.maxEvents
-
-
-    def getMaxLumis(self):
-        """
-        Return the number of lumis in the dataset
-        """
-        return self.maxLumis
-
-
-    def getEventsPerBlock(self):
-        """
-        list the event collections structure by fileblock
-        """
-        return self.eventsPerBlock
-
-
-    def getEventsPerFile(self):
-        """
-        list the event collections structure by file
-        """
-        return self.eventsPerFile
-
-
-    def getFiles(self):
-        """
-        return files grouped by fileblock
-        """
-        return self.blocksinfo
-
-
-    def getParent(self):
-        """
-        return parent grouped by file
-        """
-        return self.parent
-
-
-    def getLumis(self):
-        """
-        return lumi sections grouped by file
-        """
-        return self.lumis
-
-
-    def getListFiles(self):
-        """
-        return parent grouped by file
-        """
-        return self.files

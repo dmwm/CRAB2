@@ -49,16 +49,17 @@ class DataLocation:
         DLS_type="DLS_TYPE_PHEDEX"
         dls=DLSInfo(DLS_type,self.cfg_params)
         blockSites = dls.getReplicasBulk(self.Listfileblocks)
-        OK = len(blockSites)>0   # who knows if this is the right test 
-        if OK:
-            pass # no problem
-        else:
-            # assume it is some local scope DBS
-            try:
-                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
-            except:
-                msg = "CAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
-                raise CrabException(msg)
+        if len(blockSites) == 0 :
+            common.logger.info("No dataset location information found in PhEDEx")
+            if dbs_url == global_dbs3:
+                common.logger.info("Dataset in global DBS without location information")
+            else:
+                common.logger.info("Use origin site location recorded in local scope DBS")
+                try:
+                    blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
+                except:
+                    msg = "CAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
+                    raise CrabException(msg)
 
         self.SelectedSites = blockSites
 
