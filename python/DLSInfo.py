@@ -59,7 +59,7 @@ class DLSInfo:
             raise CrabException(msg)
         common.logger.debug("DLS interface: %s Server %s"%(type,endpoint))       
         try:
-            self.api = dlsClient.getDlsApi(dls_type=type,dls_endpoint=endpoint)
+            self.api = dlsClient.getDlsApi(dls_type=type,dls_endpoint=endpoint,verbosity=dlsApi.DLS_VERB_INFO)
         except dlsApi.DlsApiError, inst:
             msg = "Error when binding the DLS interface: %s  Server %s"%(str(inst),endpoint)
             #print msg
