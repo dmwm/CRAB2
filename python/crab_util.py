@@ -947,6 +947,20 @@ def verify_dbs_url(self) :
         dbs3_url = dbs_url
         dbs2_url = None
 
+    # if local scope DBS is selected, make sure dataset tier is one which
+    # is expected to be born there !
+    tiers_for_local_scope_dbs = ['USER']
+    if dbs3_url in [local_dbs3_01, local_dbs3_02, local_dbs3_03] :
+        datasetPath = self.cfg_params['CMSSW.datasetpath']
+        tier = datasetPath.split('/')[-1]
+        if not tier in tiers_for_local_scope_dbs :
+            msg = "ERROR: local scope DBS instance %s" % dbs3_url
+            msg += "\n      specified while dataset is"
+            msg += "\n      %s" % datasetPath
+            msg += "\n    When using local scope DBS, dataset must have one of the following tiers:"
+            msg += "\n      %s" %  tiers_for_local_scope_dbs
+            raise CrabException(msg)
+
     return (isDbs2, isDbs3, dbs2_url, dbs3_url)
 
 
