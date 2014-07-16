@@ -55,7 +55,7 @@ class check_HN_name:
             if status == 1: 
                 print '\nWARNING: failed also using urlencoded DN '
             else: 
-                print 'my HN user name is: %s \n'%name
+                print 'my HN user name is: %s \n'%hnName
                 print 'problems with crab_utils'   
         print '\nend check.....................'
         
