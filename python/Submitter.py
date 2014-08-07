@@ -293,7 +293,7 @@ class Submitter(Actor):
         self.executable = self.cfg_params.get('CMSSW.executable','cmsRun')
         VO = self.cfg_params.get('GRID.virtual_organization','cms')
 
-        params = {'tool': common.prog_name,
+        params = {'tool': 'crab2',
                   'SubmissionType':'direct',
                   'JSToolVersion': common.prog_version_str,
                   'tool_ui': os.environ.get('HOSTNAME',''),
