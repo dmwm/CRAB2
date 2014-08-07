@@ -599,7 +599,7 @@ To use verify data discovery information retrieved from DBS2 and DBS3:  I<verify
 
 =head3 B<additional_input_files>
 
-Any additional input file you want to ship to WN: comma separated list. IMPORTANT NOTE: they will be placed in the WN working dir, and not in ${CMS_SEARCH_PATH}. Specific files required by CMSSW application must be placed in the local data directory ($CMSSW_BASE/src/data), which will be automatically shipped by CRAB itself, without specifying them as additional_input_files. You do not need to specify the I<ParameterSet> you are using, which will be included automatically. Wildcards are allowed. No default value. 
+Any additional input file you want to ship to WN: comma separated list. IMPORTANT NOTE: they will be placed in the WN working dir, and not in ${CMS_SEARCH_PATH}. Specific files required by CMSSW application must be placed in the local scram directory tree in a location that will be automatically added to ${CMS_SEARCH_PATH} (e.g. $CMSSW_BASE/src), which will be automatically shipped by CRAB itself, without specifying them as additional_input_files. You do not need to specify the I<ParameterSet> you are using, which will be included automatically. Wildcards are allowed. No default value. 
 
 =head3 B<script_exe>
 
