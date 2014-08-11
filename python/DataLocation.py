@@ -60,8 +60,8 @@ class DataLocation:
         import json
         import subprocess
         PhEDExUrl = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/BlockReplicaSummary"
-        apiUrl = PhEDExUrl + "?BlockReplicaSummary?dataset=%s&complete=y" % self.datasetPath
-        cmd='curl -ks "https://cmsweb.cern.ch/phedex/datasvc/json/prod/BlockReplicaSummary?dataset=/SingleMu/Run2012B-TOPMuPlusJets-22Jan2013-v1/AOD&complete=y"'
+        apiUrl = PhEDExUrl + "?BlockReplicaSummary&dataset=%s&complete=y" % self.datasetPath
+        cmd = 'curl -ks "%s"' % apiUrl
         j=subprocess.check_output(cmd,shell=True)
         dict=json.loads(j)
         # blockLocations is a list of dictionaries, one per block
