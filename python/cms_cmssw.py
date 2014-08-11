@@ -16,9 +16,12 @@ try:
 except:
     import simplejson as json
 
+import cjson
+import subprocess
+import os
+
 from IMProv.IMProvNode import IMProvNode
 from IMProv.IMProvLoader import loadIMProvFile
-from WMCore.SiteScreening.BlackWhiteListParser import SEBlackWhiteListParser
 
 import os, string, glob
 from xml.dom import pulldom
@@ -257,23 +260,36 @@ class Cmssw(JobType):
 #wmbs
         self.automation = int(self.cfg_params.get('WMBS.automation',0))
         if self.automation == 0:
-            self.seListParser= SEBlackWhiteListParser(logger=common.logger())
+            # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
+            # beware SiteDB V2 API, cast unicode to string inside this function !
+            pnn2psn = self.getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+            
             if self.datasetPath:
                 blockSites = self.DataDiscoveryAndLocation(cfg_params)
             #DBSDLS-end
             # insert here site override from crab.cfg
             # note that b/w lists will still be applied
             if cfg_params.has_key('GRID.data_location_override'):
-                sitesOverride = cfg_params['GRID.data_location_override'].split(',')
-                common.logger.info("DataSite overridden by user to: %s" % sitesOverride)
-                seOverride = self.seListParser.expandList(sitesOverride)
-                # beware SiteDB V2 API, cast unicode to string
-                seOverride = map(lambda x:str(x), seOverride)
-                common.logger.info("DataLocation overridden by user to: %s\n" % seOverride)
+                data_location_override = cfg_params['GRID.data_location_override'].split(',')
+                common.logger.info("data_location_override set by user to: %s" % data_location_override)
+                pnnOverride = expandIntoListOfPhedexNodeNames(locationOverride)
+                #########SBSB need change here to use SiteName inplace of SE
+                common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
                 for block in blockSites.keys():
-                    blockSites[block] = seOverride
+                    blockSites[block] = psnOverride
 
+            # go from a list of  PhedexNodeName to a list of ProcessingSiteName
+            for block in blockSites.keys():
+                PNNs = blockSites[block]
+                PSNs = [pnn2psn[pnn] for pnn in PNNs if pnn in pnn2psn.keys()]
+                blockSites[block] = PSNs
+
+            # this is a dictionary. Key= block name Value=list of site names 
             self.conf['blockSites']=blockSites
+
+            print "SB blockSites"
+            print self.conf['blockSites']
+            
             
             ## Select Splitting
             splitByRun = int(cfg_params.get('CMSSW.split_by_run',0))
@@ -401,12 +417,38 @@ class Cmssw(JobType):
                 msg = "The file %s may only contain alphanumeric characters and -, _, ." % fileName
                 raise CrabException(msg)
 
+    def getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB(self):
+
+        cmd='curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/data-processing"'
+        print os.environ['X509_USER_PROXY']
+        try:
+            cj=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
+        except :
+            import sys
+            msg = "ERROR trying to talk to SiteDB\n%s"%str(sys.exc_info()[1])
+            raise CrabException(msg)
+        try:
+            dataProcessingDict=cjson.decode(cj)
+        except:
+            msg = "ERROR decoding SiteDB output\n%s"%cj
+            raise CrabException(msg)
+        pnn2psn={}
+        for s in dataProcessingDict['result']:
+            pnn2psn[s[0]]=s[1]
+        
+        return pnn2psn
+
+
+
 
     def DataDiscoveryAndLocation(self, cfg_params):
+        #
+        # returns :
+        # sites = dictionary with keys = blocks and value = list of site names
 
         import DataDiscovery
         import DataLocation
-        common.logger.log(10-1,"CMSSW::DataDiscoveryAndLocation()")
+        common.logger.log(10-1,"CMSSW::DataDiscoveryAndLoos.environ['X509_USER_PROXY']cation()")
 
         datasetPath=self.datasetPath
 
@@ -426,7 +468,10 @@ class Cmssw(JobType):
             msg = 'ERROR ***: failed Data Discovery in DBS :  %s'%ex.getErrorMessage()
             raise CrabException(msg)
 
+        ## filesbyblock is a dictionary: keys are blocknames, values are list of LFN's
         self.filesbyblock=self.pubdata.getFiles()
+        print "SB cms_cmssw.py: filesbyblock"
+        print self.filesbyblock
         self.conf['pubdata']=self.pubdata
 
         ## get max number of events
@@ -438,30 +483,43 @@ class Cmssw(JobType):
             dataloc.fetchDLSInfo()
 
         except DataLocation.DataLocationError , ex:
-            msg = 'ERROR ***: failed Data Location in DLS \n %s '%ex.getErrorMessage()
+            msg = 'ERROR ***: failed Data Location lookup \n %s '%ex.getErrorMessage()
             raise CrabException(msg)
 
 
         unsorted_sites = dataloc.getSites()
+        # unsorted sites is a dictionary. key is block name, value is a list of sites.
+        print "SB cms_cmssw.py: unsorted_sites"
+        print unsorted_sites
+
+        # add the site lists to DBS block list
         sites = self.filesbyblock.fromkeys(self.filesbyblock,'')
-        for lfn in self.filesbyblock.keys():
-            if unsorted_sites.has_key(lfn):
-                sites[lfn]=unsorted_sites[lfn]
+        for block in self.filesbyblock.keys():
+            if unsorted_sites.has_key(block):
+                sites[block]=unsorted_sites[block]
             else:
-                sites[lfn]=[]
+                sites[block]=[]
 
         if len(sites)==0:
             msg = 'ERROR ***: no location for any of the blocks of this dataset: \n\t %s \n'%datasetPath
             msg += "\tMaybe the dataset is located only at T1's (or at T0), where analysis jobs are not allowed\n"
             msg += "\tPlease check DataDiscovery page https://cmsweb.cern.ch/dbs_discovery/\n"
             raise CrabException(msg)
+    # this appears broken bad code
+        #allSites = []
+        #listSites = sites.values()
+        #for listSite in listSites:
+        #    for oneSite in listSite:
+        #        allSites.append(oneSite)
+        #[allSites.append(it) for it in allSites if not allSites.count(it)]
+    # probably the following was meant
+        allSites=set()
+        for list in sites.values():
+            for site in list:
+                allSites.add(site)
+    # anyhow allSites is not used anywhere (thankfully)
 
-        allSites = []
-        listSites = sites.values()
-        for listSite in listSites:
-            for oneSite in listSite:
-                allSites.append(oneSite)
-        [allSites.append(it) for it in allSites if not allSites.count(it)]
+
 
 
         # screen output
