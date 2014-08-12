@@ -270,7 +270,13 @@ class Cmssw(JobType):
         if cfg_params.has_key('GRID.data_location_override'):
             data_location_override = cfg_params['GRID.data_location_override'].split(',')
             # expand to a list of PNNs
-            pnnOverride = self.expandIntoListOfPhedexNodeNames(data_location_override)
+            try:
+                pnnOverride = expandIntoListOfPhedexNodeNames(data_location_override)
+            except:
+                import sys
+                msg = "ERROR invalid format for 'data_location_override' parameter in crab config file\n%s"%str(sys.exc_info()[1])
+                raise CrabException(msg)
+                  
             common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
             for block in blockSites.keys():
                 blockSites[block] = pnnOverride
@@ -429,37 +435,6 @@ class Cmssw(JobType):
             pnn2psn[s[0]]=s[1]
         
         return pnn2psn
-
-    def  expandIntoListOfPhedexNodeNames(self,location_list):
-        # will use
-        # https://cmsweb.cern.ch/phedex/datasvc/doc/nodes
-        # build API node filter, add wildcards wich are not required by Crab2
-        args=''
-        for loc in location_list:
-            args += '&node=%s*'%loc.strip()
-        # first char of arg to API is ?, not &
-        args = '?'+args[1:]
-        apiUrl = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/Nodes' + args
-        cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
-        try:
-            j=None
-            j=subprocess.check_output(cmd,shell=True)
-            dict=json.loads(j)
-        except:
-            import sys
-            msg = "ERROR in $CRABPYTHON/cms_cmssw.py trying to retrieve Phedex Node list  with\n%s" %cmd
-            if j:
-                msg += "\n       command stdout is:\n%s" % j
-            msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
-            raise CrabException(msg)
-
-        listOfPNNs = []
-        PNNdicts = dict['phedex']['node']
-        for node in PNNdicts:
-            listOfPNNs.append(str(node['name']))  # cast to str to avoid unicode
-        
-
-        return listOfPNNs
 
 
 
