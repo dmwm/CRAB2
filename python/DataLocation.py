@@ -35,13 +35,6 @@ class DataLocation:
         Contact DLS
         """
 
-        print "SB================================="
-        print "in fetchDLSInfo"
-        print "self.datasetPath"
-        print self.datasetPath
-        print "SB================================="
-        
-
         # Force show_prod=1 for everybody, grid jobs rely on central black list and t1access role to limit access to T1's
         self.cfg_params['CMSSW.show_prod'] = 1
 
@@ -59,11 +52,22 @@ class DataLocation:
         #blockSites = dls.getReplicasBulk(self.Listfileblocks)
         import json
         import subprocess
-        PhEDExUrl = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/BlockReplicaSummary"
-        apiUrl = PhEDExUrl + "?BlockReplicaSummary&dataset=%s&complete=y" % self.datasetPath
-        cmd = 'curl -ks "%s"' % apiUrl
-        j=subprocess.check_output(cmd,shell=True)
-        dict=json.loads(j)
+        PhEDExUrl = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/"
+        apiUrl = PhEDExUrl + "BlockReplicaSummary?dataset=%s&complete=y" % self.datasetPath
+        cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
+        common.logger.debug("Retrieve block locations with\n%s" % cmd)
+
+        try:
+            j=None
+            j=subprocess.check_output(cmd,shell=True)
+            dict=json.loads(j)
+        except:
+            import sys
+            msg = "ERROR in $CRABPYTHON/DataLocation.py trying to retrieve data locations with\n%s" %cmd
+            if j:
+                msg += "\n       command stdout is:\n%s" % j
+            msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
+            raise CrabException(msg)
         # blockLocations is a list of dictionaries, one per block
         # format of each entry is like
         # {u'name': u'/SingleMu/Run2012B-TOPMuPlusJets-22Jan2013-v1/AOD#42cbaf9c-715f-11e2-af21-00221959e72f',
@@ -82,7 +86,6 @@ class DataLocation:
             bname = str(block['name'])
             blockSites[bname]=[]
             for replica in block['replica']:
-                print replica
                 site=str(replica['node'])
                 blockSites[bname].append(site)
 
