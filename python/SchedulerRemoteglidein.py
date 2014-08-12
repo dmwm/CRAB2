@@ -143,13 +143,17 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         seDest = task.jobs[i-1]['dlsDestination']
 
         if seDest == [''] :
-            seDest = self.blackWhiteListParser.expandList("T") # all of SiteDB
+            print "SB SchedulerRemoteGlidein line ~146"
+            print "SB NEED TO PROVIDE HERE LIST OF ALL SITES IN SITEDB"
+            #seDest = self.blackWhiteListParser.expandList("T") # all of SiteDB
 
-        seString=self.blackWhiteListParser.cleanForBlackWhiteList(seDest)
+        #seString=self.blackWhiteListParser.cleanForBlackWhiteList(seDest)
+        seString = seDest
+        print "SB SchedulerRemoteGlidein need to implement BW list of PNN"
         # beware SiteDB V2 API, explicely cast to string in case it is unicode
         seString=str(seString)
         
-        jobParams += '+DESIRED_SEs = "'+seString+'"; '
+        jobParams += '+DESIRED_Sites = "'+seString+'"; '
 
         scram = Scram.Scram(None)
         cmsVersion = scram.getSWVersion()
