@@ -272,8 +272,8 @@ class Cmssw(JobType):
             if cfg_params.has_key('GRID.data_location_override'):
                 data_location_override = cfg_params['GRID.data_location_override'].split(',')
                 common.logger.info("data_location_override set by user to: %s" % data_location_override)
-                pnnOverride = expandIntoListOfPhedexNodeNames(locationOverride)
-                #########SBSB need change here to use SiteName inplace of SE
+                pnnOverride = expandIntoListOfPhedexNodeNames(data_location_override)
+                #########SBSB need change here to use SiteName in place of SE
                 common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
                 for block in blockSites.keys():
                     blockSites[block] = psnOverride
@@ -287,10 +287,6 @@ class Cmssw(JobType):
             # this is a dictionary. Key= block name Value=list of site names 
             self.conf['blockSites']=blockSites
 
-            print "SB blockSites"
-            print self.conf['blockSites']
-            
-            
             ## Select Splitting
             splitByRun = int(cfg_params.get('CMSSW.split_by_run',0))
 
@@ -419,8 +415,7 @@ class Cmssw(JobType):
 
     def getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB(self):
 
-        cmd='curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/data-processing"'
-        print os.environ['X509_USER_PROXY']
+        cmd='curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/datarocessing"'
         try:
             cj=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
         except :
@@ -470,8 +465,6 @@ class Cmssw(JobType):
 
         ## filesbyblock is a dictionary: keys are blocknames, values are list of LFN's
         self.filesbyblock=self.pubdata.getFiles()
-        print "SB cms_cmssw.py: filesbyblock"
-        print self.filesbyblock
         self.conf['pubdata']=self.pubdata
 
         ## get max number of events
@@ -489,11 +482,10 @@ class Cmssw(JobType):
 
         unsorted_sites = dataloc.getSites()
         # unsorted sites is a dictionary. key is block name, value is a list of sites.
-        print "SB cms_cmssw.py: unsorted_sites"
-        print unsorted_sites
 
         # add the site lists to DBS block list
         sites = self.filesbyblock.fromkeys(self.filesbyblock,'')
+
         for block in self.filesbyblock.keys():
             if unsorted_sites.has_key(block):
                 sites[block]=unsorted_sites[block]
