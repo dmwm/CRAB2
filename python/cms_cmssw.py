@@ -257,61 +257,58 @@ class Cmssw(JobType):
         ## Perform the data location and discovery (based on DBS/DLS)
         ## SL: Don't if NONE is specified as input (pythia use case)
         blockSites = {}
-#wmbs
-        self.automation = int(self.cfg_params.get('WMBS.automation',0))
-        if self.automation == 0:
-            # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
-            # beware SiteDB V2 API, cast unicode to string inside this function !
-            pnn2psn = self.getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+
+        # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
+        # beware SiteDB V2 API, cast unicode to string inside this function !
+        pnn2psn = self.getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
             
-            if self.datasetPath:
-                blockSites = self.DataDiscoveryAndLocation(cfg_params)
-            #DBSDLS-end
-            # insert here site override from crab.cfg
-            # note that b/w lists will still be applied
-            if cfg_params.has_key('GRID.data_location_override'):
-                data_location_override = cfg_params['GRID.data_location_override'].split(',')
-                common.logger.info("data_location_override set by user to: %s" % data_location_override)
-                pnnOverride = expandIntoListOfPhedexNodeNames(data_location_override)
-                #########SBSB need change here to use SiteName in place of SE
-                common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
-                for block in blockSites.keys():
-                    blockSites[block] = psnOverride
-
-            # go from a list of  PhedexNodeName to a list of ProcessingSiteName
+        if self.datasetPath:
+            blockSites = self.DataDiscoveryAndLocation(cfg_params)
+        #DBSDLS-end
+        # insert here site override from crab.cfg
+        # note that b/w lists will still be applied
+        if cfg_params.has_key('GRID.data_location_override'):
+            data_location_override = cfg_params['GRID.data_location_override'].split(',')
+            # expand to a list of PNNs
+            pnnOverride = self.expandIntoListOfPhedexNodeNames(data_location_override)
+            common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
             for block in blockSites.keys():
-                PNNs = blockSites[block]
-                PSNs = [pnn2psn[pnn] for pnn in PNNs if pnn in pnn2psn.keys()]
-                blockSites[block] = PSNs
+                blockSites[block] = pnnOverride
+                
+        # go from a list of  PhedexNodeName to a list of ProcessingSiteName
+        for block in blockSites.keys():
+            PNNs = blockSites[block]
+            PSNs = [pnn2psn[pnn] for pnn in PNNs if pnn in pnn2psn.keys()]
+            blockSites[block] = PSNs
 
-            # this is a dictionary. Key= block name Value=list of site names 
-            self.conf['blockSites']=blockSites
+        # this is a dictionary. Key= block name Value=list of site names 
+        self.conf['blockSites']=blockSites
 
-            ## Select Splitting
-            splitByRun = int(cfg_params.get('CMSSW.split_by_run',0))
+        ## Select Splitting
+        splitByRun = int(cfg_params.get('CMSSW.split_by_run',0))
 
-            if self.selectNoInput:
-                if self.pset == None:
-                    self.algo = 'ForScript'
-                else:
-                    self.algo = 'NoInput'
-                    self.conf['managedGenerators']=self.managedGenerators
-                    self.conf['generator']=self.generator
-            elif self.ads or self.lumiMask or self.lumiParams:
-                self.algo = 'LumiBased'
-                if splitByRun:
-                    msg = "Cannot combine split by run with lumi_mask, ADS, " \
-                          "or lumis_per_job. Use split by lumi mode instead."
-                    raise CrabException(msg)
-
-            elif splitByRun ==1:
-                self.algo = 'RunBased'
+        if self.selectNoInput:
+            if self.pset == None:
+                self.algo = 'ForScript'
             else:
-                self.algo = 'EventBased'
-            common.logger.debug("Job splitting method: %s" % self.algo)
+                self.algo = 'NoInput'
+                self.conf['managedGenerators']=self.managedGenerators
+                self.conf['generator']=self.generator
+        elif self.ads or self.lumiMask or self.lumiParams:
+            self.algo = 'LumiBased'
+            if splitByRun:
+                msg = "Cannot combine split by run with lumi_mask, ADS, " \
+                    "or lumis_per_job. Use split by lumi mode instead."
+                raise CrabException(msg)
 
-            splitter = JobSplitter(self.cfg_params,self.conf)
-            self.dict = splitter.Algos()[self.algo]()
+        elif splitByRun ==1:
+            self.algo = 'RunBased'
+        else:
+            self.algo = 'EventBased'
+        common.logger.debug("Job splitting method: %s" % self.algo)
+
+        splitter = JobSplitter(self.cfg_params,self.conf)
+        self.dict = splitter.Algos()[self.algo]()
 
         self.argsFile= '%s/arguments.xml'%common.work_space.shareDir()
         self.rootArgsFilename= 'arguments'
@@ -415,7 +412,7 @@ class Cmssw(JobType):
 
     def getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB(self):
 
-        cmd='curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/datarocessing"'
+        cmd='curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/data-processing"'
         try:
             cj=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
         except :
@@ -432,6 +429,37 @@ class Cmssw(JobType):
             pnn2psn[s[0]]=s[1]
         
         return pnn2psn
+
+    def  expandIntoListOfPhedexNodeNames(self,location_list):
+        # will use
+        # https://cmsweb.cern.ch/phedex/datasvc/doc/nodes
+        # build API node filter, add wildcards wich are not required by Crab2
+        args=''
+        for loc in location_list:
+            args += '&node=%s*'%loc.strip()
+        # first char of arg to API is ?, not &
+        args = '?'+args[1:]
+        apiUrl = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/Nodes' + args
+        cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
+        try:
+            j=None
+            j=subprocess.check_output(cmd,shell=True)
+            dict=json.loads(j)
+        except:
+            import sys
+            msg = "ERROR in $CRABPYTHON/cms_cmssw.py trying to retrieve Phedex Node list  with\n%s" %cmd
+            if j:
+                msg += "\n       command stdout is:\n%s" % j
+            msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
+            raise CrabException(msg)
+
+        listOfPNNs = []
+        PNNdicts = dict['phedex']['node']
+        for node in PNNdicts:
+            listOfPNNs.append(str(node['name']))  # cast to str to avoid unicode
+        
+
+        return listOfPNNs
 
 
 
@@ -609,11 +637,7 @@ class Cmssw(JobType):
         return
 
     def numberOfJobs(self):
-#wmbs
-        if self.automation==0:
-           return self.dict['njobs']
-        else:
-           return None
+        return self.dict['njobs']
 
     def getTarBall(self, exe):
         """
