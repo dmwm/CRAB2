@@ -831,6 +831,10 @@ class Crab:
             msg = msg + 'Please specify a scheduler type in the crab cfg file'
             raise CrabException(msg)
         self.scheduler_name = self.cfg_params["CRAB.scheduler"]
+
+        if self.scheduler_name == "glite":
+            msg = "FATAL ERROR: Scheduler glite is not supported anymore, use remoteglidein"
+            raise CrabException(msg)
                                           
 
         klass_name = 'Scheduler' + string.capitalize(self.scheduler_name)
