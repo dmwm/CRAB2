@@ -704,9 +704,7 @@ class Crab:
                 """
                 Materialize JDL
                 """
-                ## Temporary:
-                if opt == '-printJdl':
-                    common.logger.info("WARNING: -printJdl option is deprecated : please use -createJdl \n")
+
                 if val =='all' or val == None or val == '':
                     jobs = common._db.nJobs("list")
                 else:
