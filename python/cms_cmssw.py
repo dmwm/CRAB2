@@ -274,7 +274,9 @@ class Cmssw(JobType):
                 pnnOverride = expandIntoListOfPhedexNodeNames(data_location_override)
             except:
                 import sys
-                msg = "ERROR invalid format for 'data_location_override' parameter in crab config file\n%s"%str(sys.exc_info()[1])
+                msg = "ERROR invalid parameter format in crab config file"
+                msg += "\ndata_location_override = %s" % cfg_params['GRID.data_location_override']
+                msg += "\n%s"%str(sys.exc_info()[1])
                 raise CrabException(msg)
                   
             common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
@@ -500,19 +502,14 @@ class Cmssw(JobType):
             msg += "\tMaybe the dataset is located only at T1's (or at T0), where analysis jobs are not allowed\n"
             msg += "\tPlease check DataDiscovery page https://cmsweb.cern.ch/dbs_discovery/\n"
             raise CrabException(msg)
-    # this appears broken bad code
+    # SB: this appears broken bad code
         #allSites = []
         #listSites = sites.values()
         #for listSite in listSites:
         #    for oneSite in listSite:
         #        allSites.append(oneSite)
         #[allSites.append(it) for it in allSites if not allSites.count(it)]
-    # probably the following was meant
-        allSites=set()
-        for list in sites.values():
-            for site in list:
-                allSites.add(site)
-    # anyhow allSites is not used anywhere (thankfully)
+     # anyhow allSites is not used anywhere (so SB commented it on Aug 13, 2014)
 
 
 
