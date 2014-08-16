@@ -145,14 +145,14 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         psnDest = task.jobs[i-1]['dlsDestination']
 
         if psnDest == [''] :
-            print "SB SchedulerRemoteGlidein line ~146"
-            print "SB NEED TO PROVIDE HERE LIST OF ALL PSN's"
-            pnsDest = ['T2_IT_Bari']
-            #psnDest = self.blackWhiteListParser.expandList("T") # all of SiteDB
-
+            # crab.cfg had datasetpath = None
+            pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+            allPSNs = set(pnn2psn.values())   # set removes duplicates
+            psnDest = allPSNs
+            
         blackList = self.cfg_params.get("GRID.se_black_list", [])
         whiteList = self.cfg_params.get("GRID.se_white_list", [])
-
+        
         psnDest = cleanPsnListForBlackWhiteLists(psnDest, blackList, whiteList)
         if not psnDest or psnDest == [] or psnDest == ['']:
             msg = "No Processing Site Name after applying black/white list."
@@ -254,7 +254,10 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         blackList = self.cfg_params.get("GRID.se_black_list", [])
         whiteList = self.cfg_params.get("GRID.se_white_list", [])
 
-        psnDest = cleanPsnListForBlackWhiteLists(seList, blackList, whiteList)
+        if seList == ['']: # datasetpath=None in crab.cfg any site wil do
+            psnDest = [True]
+        else:
+            psnDest = cleanPsnListForBlackWhiteLists(seList, blackList, whiteList)
 
         return psnDest
 
