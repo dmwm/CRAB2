@@ -965,49 +965,6 @@ def verify_dbs_url(self) :
     return (isDbs2, isDbs3, dbs2_url, dbs3_url)
 
 
-def  expandIntoListOfPhedexNodeNames(location_list):
-    import subprocess
-    import json
-    import Lexicon
-    # take as input a list of locations
-    # raise CrabExceptoin if one is not a valid Node Name
-    # will use
-    # https://cmsweb.cern.ch/phedex/datasvc/doc/nodes
-    # build API node filter, add wildcards wich are not required by Crab2
-    args=''
-    for loc in location_list:
-        phedexNode = loc.strip()
-        try:
-            Lexicon.cmsname(phedexNode)
-        except Exception, text:
-            msg =  "%s\n'%s' is not a valid Phedex Node Name" % (text,phedexNode)
-            raise CrabException(msg)
-        args += "&node=%s*" % phedexNode
-    # first char of arg to API is ?, not &
-    args = '?'+args[1:]
-    apiUrl = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/Nodes' + args
-    cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
-    try:
-        j=None
-        j=subprocess.check_output(cmd,shell=True)
-        dict=json.loads(j)
-    except:
-        import sys
-        msg = "ERROR in $CRABPYTHON/cms_cmssw.py trying to retrieve Phedex Node list  with\n%s" %cmd
-        if j:
-            msg += "\n       command stdout is:\n%s" % j
-        msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
-        raise CrabException(msg)
-
-    listOfPNNs = []
-    PNNdicts = dict['phedex']['node']
-    for node in PNNdicts:
-        listOfPNNs.append(str(node['name']))  # cast to str to avoid unicode
-        
-
-    return listOfPNNs
-
-
 ####################################
 if __name__ == '__main__':
     print 'sys.argv[1] =',sys.argv[1]

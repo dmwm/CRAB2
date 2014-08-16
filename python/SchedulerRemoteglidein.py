@@ -7,6 +7,8 @@ from crab_exceptions import CrabException
 from crab_util import runCommand
 from crab_util import gethnUserNameFromSiteDB
 from ServerConfig import *
+from NodeNameUtils import *
+
 import Scram
 
 import common
@@ -140,20 +142,28 @@ class SchedulerRemoteglidein(SchedulerGrid) :
 
         (self.remoteHost,self.remoteUserHost) = self.pickRemoteSubmissionHost(task)
 
-        seDest = task.jobs[i-1]['dlsDestination']
+        psnDest = task.jobs[i-1]['dlsDestination']
 
-        if seDest == [''] :
+        if psnDest == [''] :
             print "SB SchedulerRemoteGlidein line ~146"
-            print "SB NEED TO PROVIDE HERE LIST OF ALL SITES IN SITEDB"
-            #seDest = self.blackWhiteListParser.expandList("T") # all of SiteDB
+            print "SB NEED TO PROVIDE HERE LIST OF ALL PSN's"
+            pnsDest = ['T2_IT_Bari']
+            #psnDest = self.blackWhiteListParser.expandList("T") # all of SiteDB
 
-        #seString=self.blackWhiteListParser.cleanForBlackWhiteList(seDest)
-        seString = seDest
-        print "SB SchedulerRemoteGlidein need to implement BW list of PNN"
-        # beware SiteDB V2 API, explicely cast to string in case it is unicode
-        seString=str(seString)
-        
-        jobParams += '+DESIRED_Sites = "'+seString+'"; '
+        blackList = self.cfg_params.get("GRID.se_black_list", [])
+        whiteList = self.cfg_params.get("GRID.se_white_list", [])
+
+        psnDest = cleanPsnListForBlackWhiteLists(psnDest, blackList, whiteList)
+        if not psnDest or psnDest == [] or psnDest == ['']:
+            msg = "No Processing Site Name after applying black/white list."
+            msg += " Can't submit"
+            common.logger.info(msg)
+            raise CrabException(msg)
+
+        msg = "list of PSN's for submission: %s" % psnDest
+        common.logger.info(msg)
+
+        jobParams += '+DESIRED_Sites = "%s";' % psnDest
 
         scram = Scram.Scram(None)
         cmsVersion = scram.getSWVersion()
@@ -241,8 +251,12 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         """
         Check the compatibility of available resources
         """
+        blackList = self.cfg_params.get("GRID.se_black_list", [])
+        whiteList = self.cfg_params.get("GRID.se_white_list", [])
 
-        return [True]
+        psnDest = cleanPsnListForBlackWhiteLists(seList, blackList, whiteList)
+
+        return psnDest
 
 
     def decodeLogInfo(self, fileName):

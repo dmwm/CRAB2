@@ -31,29 +31,6 @@ class JobSplitter:
         self.limitTotalLumis = False
         self.limitJobLumis = False
 
-        #self.maxEvents
-        # init BlackWhiteListParser
-        self.seWhiteList = cfg_params.get('GRID.se_white_list',[])
-        if type(self.seWhiteList) == type("string"):
-            self.seWhiteList = self.seWhiteList.split(',')
-        seBlackList = cfg_params.get('GRID.se_black_list',[])
-        if type(seBlackList) == type("string"):
-            seBlackList = seBlackList.split(',')
-        if common.scheduler.name().upper() == 'REMOTEGLIDEIN' :
-            # use central black list
-            removeBList = cfg_params.get("GRID.remove_default_blacklist", 0 )
-            blackAnaOps = None
-            if int(removeBList) == 0:
-                blacklist = Downloader("http://cmsdoc.cern.ch/cms/LCG/crab/config/")
-                result = blacklist.config("site_black_list.conf").strip().split(',')
-                if result != None:
-                    blackAnaOps = result
-                    common.logger.debug("Enforced black list: %s "%blackAnaOps)
-                else:
-                    common.logger.info("WARNING: Skipping default black list!")
-                if int(removeBList) == 0 and blackAnaOps: 
-                    seBlackList += blackAnaOps
-
         ## check if has been asked for a non default file to store/read analyzed fileBlocks
         defaultName = common.work_space.shareDir()+'AnalyzedBlocks.txt'
         self.fileBlocks_FileName = os.path.abspath(self.cfg_params.get('CMSSW.fileblocks_file',defaultName))
