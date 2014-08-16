@@ -5,6 +5,7 @@ __version__ = "$Revision: 1.400 $"
 from JobType import JobType
 from crab_exceptions import *
 from crab_util import *
+from NodeNameUtils import *
 import common
 import re
 import Scram
@@ -248,24 +249,16 @@ class Cmssw(JobType):
 
         self.conf = {}
         self.conf['pubdata'] = None
-        # number of jobs requested to be created, limit obj splitting DD
-        #DBSDLS-start
-        ## Initialize the variables that are extracted from DBS/DLS and needed in other places of the code
-        self.maxEvents=0  # max events available   ( --> check the requested nb. of evts in Creator.py)
-        self.DBSPaths={}  # all dbs paths requested ( --> input to the site local discovery script)
-        self.jobDestination=[]  # Site destination(s) for each job (list of lists)
-        ## Perform the data location and discovery (based on DBS/DLS)
-        ## SL: Don't if NONE is specified as input (pythia use case)
-        blockSites = {}
 
-        # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
-        # beware SiteDB V2 API, cast unicode to string inside this function !
-        pnn2psn = self.getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+        ## Perform the data location and discovery (based on DBS/DLS)
+        # fills blockSites dictionary: Key= block name Value=list of site names 
+
+        blockSites = {}
             
         if self.datasetPath:
             blockSites = self.DataDiscoveryAndLocation(cfg_params)
-        #DBSDLS-end
-        # insert here site override from crab.cfg
+
+        # insert here location override from crab.cfg
         # note that b/w lists will still be applied
         if cfg_params.has_key('GRID.data_location_override'):
             data_location_override = cfg_params['GRID.data_location_override'].split(',')
@@ -284,12 +277,15 @@ class Cmssw(JobType):
                 blockSites[block] = pnnOverride
                 
         # go from a list of  PhedexNodeName to a list of ProcessingSiteName
+        # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
+        # from now on only Procissing Site Names are used throught crab
+        pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+
         for block in blockSites.keys():
             PNNs = blockSites[block]
             PSNs = [pnn2psn[pnn] for pnn in PNNs if pnn in pnn2psn.keys()]
             blockSites[block] = PSNs
 
-        # this is a dictionary. Key= block name Value=list of site names 
         self.conf['blockSites']=blockSites
 
         ## Select Splitting
@@ -417,28 +413,6 @@ class Cmssw(JobType):
             if not valid.match(fileName):
                 msg = "The file %s may only contain alphanumeric characters and -, _, ." % fileName
                 raise CrabException(msg)
-
-    def getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB(self):
-
-        cmd='curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/data-processing"'
-        try:
-            cj=subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
-        except :
-            import sys
-            msg = "ERROR trying to talk to SiteDB\n%s"%str(sys.exc_info()[1])
-            raise CrabException(msg)
-        try:
-            dataProcessingDict=cjson.decode(cj)
-        except:
-            msg = "ERROR decoding SiteDB output\n%s"%cj
-            raise CrabException(msg)
-        pnn2psn={}
-        for s in dataProcessingDict['result']:
-            pnn2psn[s[0]]=s[1]
-        
-        return pnn2psn
-
-
 
 
     def DataDiscoveryAndLocation(self, cfg_params):
