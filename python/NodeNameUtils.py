@@ -93,18 +93,12 @@ def cleanPsnListForBlackWhiteLists(inputList, blackList, whiteList):
     All arguments must be passed as LIST (not strings)
     """
 
-    #print "iL, BL, WL:"
-    #print inputList
-    #print blackList
-    #print whiteList
-    #print "----------------------------"
     tmpList = list(inputList)
     for dest in inputList:
         for black in blackList:
             if dest.startswith(black) :
                 tmpList.remove(dest)
     
-    #print "after BL: ", tmpList
     if not whiteList:
         cleanedList = tmpList
     else:
@@ -114,7 +108,6 @@ def cleanPsnListForBlackWhiteLists(inputList, blackList, whiteList):
                 if dest.startswith(white):
                     cleanedList.append(dest)
 
-    #print "after WL: ", cleanedList
     return cleanedList
             
 def applyGloablBlackList(cfg_params):
@@ -140,6 +133,13 @@ def applyGloablBlackList(cfg_params):
         cfg_params['GRID.se_black_list'] = blackUser + blackAnaOps 
 
 
+def validateSiteName(site):
+    """
+    make sure site has the Tx_cc_nnnn format or valid abbreviation
+    returns True or False
+    """
+    return True
+
 def validateBWLists(cfg_params):
     # make sure to have lists, not string
     blackList = cfg_params.get("GRID.se_black_list", [] )
@@ -149,8 +149,27 @@ def validateBWLists(cfg_params):
     if type(whiteList) == type("string") :
         whiteList = whiteList.strip().split(',')
 
+    # make sure each item in the list is a valid cms node name
+    # or possibly a shortcut like T3
+
+    for site in blackList:
+        try:
+            Lexicon.cmsname(site)
+        except Exception, text:
+            msg = "ERROR in GRID.se_black_list: %s\n" % blackList
+            msg += "%s\n'%s' is not a valid Phedex Node Name" % (text,site)
+            raise CrabException(msg)
+
+    for site in whiteList:
+        try:
+            Lexicon.cmsname(site)
+        except Exception, text:
+            msg = "ERROR in GRID.se_white_list: %s\n" % whiteList
+            msg += "%s\n'%s' is not a valid Phedex Node Name" % (text,site)
+            raise CrabException(msg)
+
     cfg_params['GRID.se_black_list'] = blackList
     cfg_params['GRID.se_white_list'] = whiteList
 
-    pass
+
 
