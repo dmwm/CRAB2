@@ -13,7 +13,7 @@
 
 prog_name = 'crab'
 prog_version = (2, 10, 7)
-prog_tag = 'pre3'
+prog_tag = ''
 prog_version_str=`prog_version[0]`+'.'+`prog_version[1]`+'.'+`prog_version[2]`
 if prog_tag and len(prog_tag)>0:
     prog_version_str+= "_%s" % prog_tag
