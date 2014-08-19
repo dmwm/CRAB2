@@ -111,6 +111,10 @@ class DataLocation:
         from dbs.apis.dbsClient import DbsApi
         api = DbsApi(dbs_url)
 
+        from NodeNameUtils import getMapOfSEHostName2PhedexNodeNameFromPhEDEx
+
+        se2pnn = getMapOfSEHostName2PhedexNodeNameFromPhEDEx()
+
         blockSites = {}
         for block in self.Listfileblocks:
             blockInfo=api.listBlocks(block_name=block,detail=True)
@@ -118,7 +122,16 @@ class DataLocation:
             if location == 'UNKNOWN':
                 blockSites[block] = []
             else:
-                blockSites[block] = [location]
+                if locationIsValidPNN:
+                if location.startswith('T2_') or location.startswith('T3_'):
+                    blockSites[block] = location
+                else:
+                    if se2pnn.haskey(location):
+                        blockSites[block] = se2pnn(location)
+                    else:
+                        msg = "ERROR: unknown location for block: %s. Skip it" % location
+                        common.logger.info(msg)
+                        blockSites[block] = []
 
         return blockSites
 
