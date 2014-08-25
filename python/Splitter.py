@@ -284,7 +284,7 @@ class JobSplitter:
                                     list_of_lists.append([fullString,str(-1),str(jobSkipEventCount),block])
                                 msg += "Job %s can run over %s  events (last file in block).\n"%(str(jobCount+1), str(filesEventCount - jobSkipEventCount))
                                 jobDestination.append(blockSites[block])
-                                msg += "Job %s Destination: %s\n"%(str(jobCount+1),str(SE2CMS(jobDestination[jobCount])))
+                                msg += "Job %s Destination: %s\n"%(str(jobCount+1),str(jobDestination[jobCount]))
                                 # fill jobs of block dictionary
                                 jobsOfBlock[block].append(jobCount+1)
                                 # reset counter
@@ -313,7 +313,7 @@ class JobSplitter:
                             list_of_lists.append([fullString,str(eventsPerJobRequested),str(jobSkipEventCount),block])
                         msg += "Job %s can run over %s events.\n"%(str(jobCount+1),str(eventsPerJobRequested))
                         jobDestination.append(blockSites[block])
-                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(SE2CMS(jobDestination[jobCount])))
+                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(jobDestination[jobCount]))
                         jobsOfBlock[block].append(jobCount+1)
                         # reset counter
                         jobCount = jobCount + 1
@@ -338,7 +338,7 @@ class JobSplitter:
                             list_of_lists.append([fullString,str(eventsPerJobRequested),str(jobSkipEventCount),block])
                         msg += "Job %s can run over %s events.\n"%(str(jobCount+1),str(eventsPerJobRequested))
                         jobDestination.append(blockSites[block])
-                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(SE2CMS(jobDestination[jobCount])))
+                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(jobDestination[jobCount]))
                         jobsOfBlock[block].append(jobCount+1)
                         # increase counter
                         jobCount = jobCount + 1
@@ -393,7 +393,7 @@ class JobSplitter:
                 allBlock.append( blockCounter )
                 sites=blockSites[block]
                 screenOutput += "Block %5i: jobs %20s: sites: %s\n" % (blockCounter,spanRanges(jobsOfBlock[block]),
-                    ', '.join(SE2CMS(sites)))
+                    ', '.join(sites))
                 if len(sites) == 0:
                     noSiteBlock.append( spanRanges(jobsOfBlock[block]) )
                     bloskNoSite.append( blockCounter )
