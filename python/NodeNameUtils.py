@@ -141,7 +141,8 @@ def validateSiteName(site):
     return True
 
 def validateBWLists(cfg_params):
-    # make sure to have lists, not string
+    # convert to lists for processing. But leave cfg_params
+    # as strings, since this is what Crab2 code expects
     blackList = cfg_params.get("GRID.se_black_list", [] )
     if type(blackList) == type("string") :
         blackList = blackList.strip().split(',')
@@ -167,10 +168,6 @@ def validateBWLists(cfg_params):
             msg = "ERROR in GRID.se_white_list: %s\n" % whiteList
             msg += "%s\n'%s' is not a valid Phedex Node Name" % (text,site)
             raise CrabException(msg)
-
-    cfg_params['GRID.se_black_list'] = blackList
-    cfg_params['GRID.se_white_list'] = whiteList
-
 
 def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     """
@@ -199,6 +196,7 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
         if not se in se2pnn.keys():
             se2pnn[se] = node
     """
+
     se2pnn = {'bonner-grid.rice.edu': 'T3_US_Rice',
  'bsrm-3.t2.ucsd.edu': 'T2_US_UCSD',
  'ccsrm.in2p3.fr': 'T1_FR_CCIN2P3_Disk',
@@ -324,5 +322,5 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
  'uscms1-se.fltech-grid3.fit.edu': 'T3_US_FIT'}
 
     
-
+    return se2pnn
 
