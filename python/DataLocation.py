@@ -95,6 +95,7 @@ class DataLocation:
                 common.logger.info("Dataset in global DBS without location information")
             else:
                 common.logger.info("Use origin site location recorded in local scope DBS")
+                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
                 try:
                     blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
                 except:
@@ -122,17 +123,18 @@ class DataLocation:
             if location == 'UNKNOWN':
                 blockSites[block] = []
             else:
-                if locationIsValidPNN:
+                #if locationIsValidPNN:
                 if location.startswith('T2_') or location.startswith('T3_'):
                     blockSites[block] = location
                 else:
-                    if se2pnn.haskey(location):
-                        blockSites[block] = se2pnn(location)
+                    if location in se2pnn.keys():
+                        blockSites[block] = se2pnn[location]
                     else:
                         msg = "ERROR: unknown location for block: %s. Skip it" % location
                         common.logger.info(msg)
                         blockSites[block] = []
 
+        print blockSites
         return blockSites
 
 # #######################################################################
