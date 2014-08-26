@@ -951,7 +951,7 @@ def verify_dbs_url(self) :
     # is expected to be born there !
     tiers_for_local_scope_dbs = ['USER']
     datasetPath = self.cfg_params['CMSSW.datasetpath']
-    if datasetpath.upper != 'NONE'  and dbs3_url in [local_dbs3_01, local_dbs3_02, local_dbs3_03] :
+    if datasetPath.upper() != 'NONE'  and dbs3_url in [local_dbs3_01, local_dbs3_02, local_dbs3_03] :
         tier = datasetPath.split('/')[-1]
         if not tier in tiers_for_local_scope_dbs :
             msg = "ERROR: local scope DBS instance %s" % dbs3_url
