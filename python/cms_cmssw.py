@@ -278,7 +278,7 @@ class Cmssw(JobType):
                 
         # go from a list of  PhedexNodeName to a list of ProcessingSiteName
         # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
-        # from now on only Procissing Site Names are used throught crab
+        # from now on only Processing Site Names are used throught crab
         pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
 
         for block in blockSites.keys():
@@ -476,6 +476,8 @@ class Cmssw(JobType):
             msg += "\tMaybe the dataset is located only at T1's (or at T0), where analysis jobs are not allowed\n"
             msg += "\tPlease check DataDiscovery page https://cmsweb.cern.ch/dbs_discovery/\n"
             raise CrabException(msg)
+
+        
     # SB: this appears broken bad code
         #allSites = []
         #listSites = sites.values()
@@ -484,8 +486,6 @@ class Cmssw(JobType):
         #        allSites.append(oneSite)
         #[allSites.append(it) for it in allSites if not allSites.count(it)]
      # anyhow allSites is not used anywhere (so SB commented it on Aug 13, 2014)
-
-
 
 
         # screen output
