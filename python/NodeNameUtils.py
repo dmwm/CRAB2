@@ -340,3 +340,19 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
 
     return se2pnn
 
+def getListOfPSNsForThisDomain(fqdn):
+    """
+    return a list of Processing Site Names
+    which belong to this domain, i.e. which are connected
+    to PhEDEx Node names that have SE's with same fqdn
+    """
+    se2pnn = getMapOfSEHostName2PhedexNodeNameFromPhEDEx()
+    pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+
+    listOfPSNs = []
+    for se in se2pnn.keys():
+        if fqdn in se:
+            pnn = se2pnn[se]
+            listOfPSNs.append(pnn2psn[pnn])
+
+    return listOfPSNs
