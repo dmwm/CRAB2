@@ -149,9 +149,12 @@ class SchedulerRemoteglidein(SchedulerGrid) :
             pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
             allPSNs = set(pnn2psn.values())   # set removes duplicates
             psnDest = allPSNs
-            
-        blackList = self.cfg_params.get("GRID.se_black_list", [])
-        whiteList = self.cfg_params.get("GRID.se_white_list", [])
+
+        blackList =  parseIntoList(self.cfg_params.get("GRID.se_black_list", []))
+        whiteList =  parseIntoList(self.cfg_params.get("GRID.se_white_list", []))
+
+        #raise Exception
+        #a=1/0
         
         psnDest = cleanPsnListForBlackWhiteLists(psnDest, blackList, whiteList)
         if not psnDest or psnDest == [] or psnDest == ['']:
@@ -164,6 +167,10 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         common.logger.info(msg)
 
         jobParams += '+DESIRED_Sites = "%s";' % psnDest
+
+        #raise Exception
+        #a=1/0
+
 
         scram = Scram.Scram(None)
         cmsVersion = scram.getSWVersion()
@@ -251,8 +258,8 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         """
         Check the compatibility of available resources
         """
-        blackList = self.cfg_params.get("GRID.se_black_list", [])
-        whiteList = self.cfg_params.get("GRID.se_white_list", [])
+        blackList = parseIntoList(self.cfg_params.get("GRID.se_black_list", []))
+        whiteList = parseIntoList(self.cfg_params.get("GRID.se_white_list", []))
 
         if seList == ['']: # datasetpath=None in crab.cfg any site wil do
             psnDest = [True]

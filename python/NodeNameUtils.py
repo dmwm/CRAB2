@@ -79,7 +79,7 @@ def getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB():
     for s in dataProcessingDict['result']:
         # beware SiteDB V2 API, cast to string to avoid unicode
         pnn2psn[s[0]] = str(s[1])
-        
+    
     return pnn2psn
 
 def cleanPsnListForBlackWhiteLists(inputList, blackList, whiteList):
@@ -98,7 +98,7 @@ def cleanPsnListForBlackWhiteLists(inputList, blackList, whiteList):
         for black in blackList:
             if dest.startswith(black) :
                 tmpList.remove(dest)
-    
+
     if not whiteList:
         cleanedList = tmpList
     else:
@@ -168,6 +168,22 @@ def validateBWLists(cfg_params):
             msg = "ERROR in GRID.se_white_list: %s\n" % whiteList
             msg += "%s\n'%s' is not a valid Phedex Node Name" % (text,site)
             raise CrabException(msg)
+
+
+def parseIntoList(param):
+    """
+    to be used to make sure that one crab config parameter is usable as a list of strings,
+    eve if it is a string with comma insides in the config. file
+    """
+    if type(param) == type("string") :
+        list = param.split(',')
+        for item in list:
+            item = item.strip()
+    else:
+        list = param
+
+    return list
+    
 
 def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     """
@@ -321,6 +337,6 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
  'uosaf0007.sscc.uos.ac.kr': 'T3_KR_UOS',
  'uscms1-se.fltech-grid3.fit.edu': 'T3_US_FIT'}
 
-    
+
     return se2pnn
 

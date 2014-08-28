@@ -40,9 +40,10 @@ class Submitter(Actor):
                 msg += '      Generic range is not allowed"'
                 raise CrabException(msg)
             pass
-        self.seWhiteList = cfg_params.get('GRID.se_white_list',[])
-        self.seBlackList = cfg_params.get('GRID.se_black_list',[])
-        self.datasetPath=self.cfg_params['CMSSW.datasetpath']
+
+        self.seWhiteList = parseIntoList(cfg_params.get('GRID.se_white_list',[]))
+        self.seBlackList = parseIntoList(cfg_params.get('GRID.se_black_list',[]))
+        self.datasetPath = cfg_params['CMSSW.datasetpath']
         if string.lower(self.datasetPath)=='none':
             self.datasetPath = None
         self.scram = Scram.Scram(cfg_params)
@@ -58,8 +59,6 @@ class Submitter(Actor):
             if self.chosenJobsList: self.nj_list = self.chosenJobsList
             return
         # build job list
-        #SB#from WMCore.SiteScreening.BlackWhiteListParser import SEBlackWhiteListParser
-        #SB#self.blackWhiteListParser = SEBlackWhiteListParser(self.seWhiteList, self.seBlackList, common.logger())
         common.logger.debug('nsjobs '+str(self.nsjobs))
         # get the first not already submitted
         common.logger.debug('Total jobs '+str(len(self.complete_List)))
@@ -70,7 +69,6 @@ class Submitter(Actor):
         if self.chosenJobsList != None:
             tmp_jList = self.chosenJobsList
         for job in common._db.getTask(tmp_jList).jobs:
-            #SB#cleanedBlackWhiteList = self.blackWhiteListParser.cleanForBlackWhiteList(job['dlsDestination'])
             cleanedBlackWhiteList = cleanPsnListForBlackWhiteLists(job['dlsDestination'], self.seBlackList, self.seWhiteList)
             if (cleanedBlackWhiteList != '') or (self.datasetPath == None):
                 #if ( job.runningJob['status'] in ['C','RC'] and job.runningJob['statusScheduler'] in ['Created',None]):
@@ -122,7 +120,7 @@ class Submitter(Actor):
             self.SendMLpre()
 
             list_matched , task = self.performMatch()
-            njs = self.perfromSubmission(list_matched, task)
+            njs = self.performSubmission(list_matched, task)
 
             stop = time.time()
             common.logger.debug("Submission Time: "+str(stop - start))
@@ -196,7 +194,7 @@ class Submitter(Actor):
 
         return matched , task
 
-    def perfromSubmission(self,matched,task):
+    def performSubmission(self,matched,task):
 
         njs=0
 
