@@ -31,47 +31,6 @@ class JobSplitter:
         self.limitTotalLumis = False
         self.limitJobLumis = False
 
-        #self.maxEvents
-        # init BlackWhiteListParser
-        self.seWhiteList = cfg_params.get('GRID.se_white_list',[])
-        if type(self.seWhiteList) == type("string"):
-            self.seWhiteList = self.seWhiteList.split(',')
-        seBlackList = cfg_params.get('GRID.se_black_list',[])
-        if type(seBlackList) == type("string"):
-            seBlackList = seBlackList.split(',')
-        if common.scheduler.name().upper() == 'REMOTEGLIDEIN' :
-            # use central black list
-            removeBList = cfg_params.get("GRID.remove_default_blacklist", 0 )
-            blackAnaOps = None
-            if int(removeBList) == 0:
-                blacklist = Downloader("http://cmsdoc.cern.ch/cms/LCG/crab/config/")
-                result = blacklist.config("site_black_list.conf").strip().split(',')
-                if result != None:
-                    blackAnaOps = result
-                    common.logger.debug("Enforced black list: %s "%blackAnaOps)
-                else:
-                    common.logger.info("WARNING: Skipping default black list!")
-                if int(removeBList) == 0 and blackAnaOps: 
-                    seBlackList += blackAnaOps
-
-        self.blackWhiteListParser = SEBlackWhiteListParser(self.seWhiteList, seBlackList, common.logger())
-
-        if seBlackList != []:
-            common.logger.info("SE black list applied to data location: %s" %\
-                           seBlackList)
-        if self.seWhiteList != []:
-            common.logger.info("SE white list applied to data location: %s" %\
-                           self.seWhiteList)
-        # apply BW list
-        blockSites=args['blockSites']
-        common.logger.debug("List of blocks and used locations (SE):")
-        for block,dlsDest in blockSites.iteritems():
-            noBsites=self.blackWhiteListParser.checkBlackList(dlsDest)
-            sites=self.blackWhiteListParser.checkWhiteList(noBsites)
-            if sites : blockSites[block]=sites
-            common.logger.debug("%s : %s" % (block,sites))
-        args['blockSites']=blockSites
-            
         ## check if has been asked for a non default file to store/read analyzed fileBlocks
         defaultName = common.work_space.shareDir()+'AnalyzedBlocks.txt'
         self.fileBlocks_FileName = os.path.abspath(self.cfg_params.get('CMSSW.fileblocks_file',defaultName))
@@ -325,7 +284,7 @@ class JobSplitter:
                                     list_of_lists.append([fullString,str(-1),str(jobSkipEventCount),block])
                                 msg += "Job %s can run over %s  events (last file in block).\n"%(str(jobCount+1), str(filesEventCount - jobSkipEventCount))
                                 jobDestination.append(blockSites[block])
-                                msg += "Job %s Destination: %s\n"%(str(jobCount+1),str(SE2CMS(jobDestination[jobCount])))
+                                msg += "Job %s Destination: %s\n"%(str(jobCount+1),str(jobDestination[jobCount]))
                                 # fill jobs of block dictionary
                                 jobsOfBlock[block].append(jobCount+1)
                                 # reset counter
@@ -354,7 +313,7 @@ class JobSplitter:
                             list_of_lists.append([fullString,str(eventsPerJobRequested),str(jobSkipEventCount),block])
                         msg += "Job %s can run over %s events.\n"%(str(jobCount+1),str(eventsPerJobRequested))
                         jobDestination.append(blockSites[block])
-                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(SE2CMS(jobDestination[jobCount])))
+                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(jobDestination[jobCount]))
                         jobsOfBlock[block].append(jobCount+1)
                         # reset counter
                         jobCount = jobCount + 1
@@ -379,7 +338,7 @@ class JobSplitter:
                             list_of_lists.append([fullString,str(eventsPerJobRequested),str(jobSkipEventCount),block])
                         msg += "Job %s can run over %s events.\n"%(str(jobCount+1),str(eventsPerJobRequested))
                         jobDestination.append(blockSites[block])
-                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(SE2CMS(jobDestination[jobCount])))
+                        msg+= "Job %s Destination: %s\n"%(str(jobCount+1),str(jobDestination[jobCount]))
                         jobsOfBlock[block].append(jobCount+1)
                         # increase counter
                         jobCount = jobCount + 1
@@ -432,9 +391,9 @@ class JobSplitter:
             if block in jobsOfBlock.keys() :
                 blockCounter += 1
                 allBlock.append( blockCounter )
-                sites=self.blackWhiteListParser.checkWhiteList(self.blackWhiteListParser.checkBlackList(blockSites[block],[block]),[block])
+                sites=blockSites[block]
                 screenOutput += "Block %5i: jobs %20s: sites: %s\n" % (blockCounter,spanRanges(jobsOfBlock[block]),
-                    ', '.join(SE2CMS(sites)))
+                    ', '.join(sites))
                 if len(sites) == 0:
                     noSiteBlock.append( spanRanges(jobsOfBlock[block]) )
                     bloskNoSite.append( blockCounter )

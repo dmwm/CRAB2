@@ -7,6 +7,8 @@ from crab_exceptions import CrabException
 from crab_util import runCommand
 from crab_util import gethnUserNameFromSiteDB
 from ServerConfig import *
+from NodeNameUtils import *
+
 import Scram
 
 import common
@@ -140,16 +142,35 @@ class SchedulerRemoteglidein(SchedulerGrid) :
 
         (self.remoteHost,self.remoteUserHost) = self.pickRemoteSubmissionHost(task)
 
-        seDest = task.jobs[i-1]['dlsDestination']
+        psnDest = task.jobs[i-1]['dlsDestination']
 
-        if seDest == [''] :
-            seDest = self.blackWhiteListParser.expandList("T") # all of SiteDB
+        if psnDest == [''] :
+            # crab.cfg had datasetpath = None
+            pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
+            allPSNs = set(pnn2psn.values())   # set removes duplicates
+            psnDest = allPSNs
 
-        seString=self.blackWhiteListParser.cleanForBlackWhiteList(seDest)
-        # beware SiteDB V2 API, explicely cast to string in case it is unicode
-        seString=str(seString)
+        blackList =  parseIntoList(self.cfg_params.get("GRID.se_black_list", []))
+        whiteList =  parseIntoList(self.cfg_params.get("GRID.se_white_list", []))
+
+        #raise Exception
+        #a=1/0
         
-        jobParams += '+DESIRED_SEs = "'+seString+'"; '
+        psnDest = cleanPsnListForBlackWhiteLists(psnDest, blackList, whiteList)
+        if not psnDest or psnDest == [] or psnDest == ['']:
+            msg = "No Processing Site Name after applying black/white list."
+            msg += " Can't submit"
+            common.logger.info(msg)
+            raise CrabException(msg)
+
+        msg = "list of PSN's for submission: %s" % psnDest
+        common.logger.info(msg)
+
+        jobParams += '+DESIRED_Sites = "%s";' % psnDest
+
+        #raise Exception
+        #a=1/0
+
 
         scram = Scram.Scram(None)
         cmsVersion = scram.getSWVersion()
@@ -237,8 +258,15 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         """
         Check the compatibility of available resources
         """
+        blackList = parseIntoList(self.cfg_params.get("GRID.se_black_list", []))
+        whiteList = parseIntoList(self.cfg_params.get("GRID.se_white_list", []))
 
-        return [True]
+        if seList == ['']: # datasetpath=None in crab.cfg any site wil do
+            psnDest = [True]
+        else:
+            psnDest = cleanPsnListForBlackWhiteLists(seList, blackList, whiteList)
+
+        return psnDest
 
 
     def decodeLogInfo(self, fileName):

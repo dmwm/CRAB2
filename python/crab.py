@@ -24,6 +24,7 @@ from DBinterface import DBinterface ## added to interface with DB BL--DS
 from JobList import JobList
 from ApmonIf import ApmonIf
 from CrabLogger import CrabLogger
+from NodeNameUtils import applyGloablBlackList, validateBWLists
 import common
 
 ###########################################################################
@@ -177,6 +178,15 @@ class Crab:
             msg += self.UserCfgProperties(msg)
             msg += 'End of used properties.\n'
             common.logger.log(10-1, msg)
+
+
+        # added 16 Aug 2014 by Stefano B in the context of Node Name change
+        # validate site/locations b/w lists and enforce gloabl black list
+        # do all work here
+        validateBWLists(self.cfg_params)
+        applyGloablBlackList(self.cfg_params)
+        
+
 
         self.initializeActions_(opts)
         return
@@ -704,9 +714,7 @@ class Crab:
                 """
                 Materialize JDL
                 """
-                ## Temporary:
-                if opt == '-printJdl':
-                    common.logger.info("WARNING: -printJdl option is deprecated : please use -createJdl \n")
+
                 if val =='all' or val == None or val == '':
                     jobs = common._db.nJobs("list")
                 else:
@@ -831,6 +839,10 @@ class Crab:
             msg = msg + 'Please specify a scheduler type in the crab cfg file'
             raise CrabException(msg)
         self.scheduler_name = self.cfg_params["CRAB.scheduler"]
+
+        if self.scheduler_name == "glite":
+            msg = "FATAL ERROR: Scheduler glite is not supported anymore, use remoteglidein"
+            raise CrabException(msg)
                                           
 
         klass_name = 'Scheduler' + string.capitalize(self.scheduler_name)

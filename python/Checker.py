@@ -1,15 +1,14 @@
 from Actor import *
 import common
 import string
+from NodeNameUtils import *
 
 class Checker(Actor):
     def __init__(self, cfg_params, nj_list):
         self.cfg_params = cfg_params
         self.nj_list = nj_list
-        from WMCore.SiteScreening.BlackWhiteListParser import SEBlackWhiteListParser
-        seWhiteList = cfg_params.get('GRID.se_white_list',[])
-        seBlackList = cfg_params.get('GRID.se_black_list',[])
-        self.blackWhiteListParser = SEBlackWhiteListParser(seWhiteList, seBlackList, common.logger())
+        self.whiteList = parseIntoList(cfg_params.get('GRID.se_white_list',[]))
+        self.blackList = parseIntoList(cfg_params.get('GRID.se_black_list',[]))
         self.datasetpath=self.cfg_params['CMSSW.datasetpath']
         if string.lower(self.datasetpath)=='none':
             self.datasetpath = None
@@ -32,7 +31,7 @@ class Checker(Actor):
             id_job = job['jobId'] 
             jobDest = job['dlsDestination']
             if not jobDest: jobDest=[]
-            dest = self.blackWhiteListParser.cleanForBlackWhiteList(jobDest, True)
+            dest = cleanPsnListForBlackWhiteLists(jobDest, self.blackList, self.whiteList)
 
             # only if some dest i s available or if dataset is None
             if len(dest) > 0 or not self.datasetpath: 

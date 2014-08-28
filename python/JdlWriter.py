@@ -1,5 +1,6 @@
 from Actor import *
 from crab_util import *
+from NodeNameUtils import *
 import common
 
 import os, errno, time, sys, re 
@@ -8,12 +9,10 @@ import commands
 class JdlWriter( Actor ):
     def __init__(self, cfg_params, jobs):
         self.cfg_params = cfg_params
-        self.nj_list = jobs 
-        from WMCore.SiteScreening.BlackWhiteListParser import SEBlackWhiteListParser
-        seWhiteList = cfg_params.get('GRID.se_white_list',[])
-        seBlackList = cfg_params.get('GRID.se_black_list',[])
-        self.blackWhiteListParser = SEBlackWhiteListParser(seWhiteList, seBlackList, common.logger())
+        self.nj_list = jobs
         self.datasetpath=self.cfg_params['CMSSW.datasetpath']
+        self.whiteList = parseIntoList(cfg_params.get('GRID.se_white_list',[]))
+        self.blackList = parseIntoList(cfg_params.get('GRID.se_black_list',[]))
         if string.lower(self.datasetpath)=='none':
             self.datasetpath = None
 
@@ -50,7 +49,7 @@ class JdlWriter( Actor ):
         all_jobs=[] 
         count=0
         for distDest in distinct_dests: 
-            dest = self.blackWhiteListParser.cleanForBlackWhiteList(distDest)
+            dest = cleanPsnListForBlackWhiteLists(distDest, self.blackList, self.whiteList)
             if not dest and self.datasetpath: 
                 common.logger.info('No destination available: will not create jdl \n' )
                 continue

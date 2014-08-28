@@ -8,6 +8,8 @@ import socket
 import Scram
 from ProgressBar import ProgressBar
 from TerminalController import TerminalController
+from NodeNameUtils import *
+
 try:
     from hashlib import sha1
 except:
@@ -38,9 +40,10 @@ class Submitter(Actor):
                 msg += '      Generic range is not allowed"'
                 raise CrabException(msg)
             pass
-        self.seWhiteList = cfg_params.get('GRID.se_white_list',[])
-        self.seBlackList = cfg_params.get('GRID.se_black_list',[])
-        self.datasetPath=self.cfg_params['CMSSW.datasetpath']
+
+        self.seWhiteList = parseIntoList(cfg_params.get('GRID.se_white_list',[]))
+        self.seBlackList = parseIntoList(cfg_params.get('GRID.se_black_list',[]))
+        self.datasetPath = cfg_params['CMSSW.datasetpath']
         if string.lower(self.datasetPath)=='none':
             self.datasetPath = None
         self.scram = Scram.Scram(cfg_params)
@@ -56,8 +59,6 @@ class Submitter(Actor):
             if self.chosenJobsList: self.nj_list = self.chosenJobsList
             return
         # build job list
-        from WMCore.SiteScreening.BlackWhiteListParser import SEBlackWhiteListParser
-        self.blackWhiteListParser = SEBlackWhiteListParser(self.seWhiteList, self.seBlackList, common.logger())
         common.logger.debug('nsjobs '+str(self.nsjobs))
         # get the first not already submitted
         common.logger.debug('Total jobs '+str(len(self.complete_List)))
@@ -68,7 +69,7 @@ class Submitter(Actor):
         if self.chosenJobsList != None:
             tmp_jList = self.chosenJobsList
         for job in common._db.getTask(tmp_jList).jobs:
-            cleanedBlackWhiteList = self.blackWhiteListParser.cleanForBlackWhiteList(job['dlsDestination'])
+            cleanedBlackWhiteList = cleanPsnListForBlackWhiteLists(job['dlsDestination'], self.seBlackList, self.seWhiteList)
             if (cleanedBlackWhiteList != '') or (self.datasetPath == None):
                 #if ( job.runningJob['status'] in ['C','RC'] and job.runningJob['statusScheduler'] in ['Created',None]):
                 if ( job.runningJob['state'] in ['Created']):
@@ -119,7 +120,7 @@ class Submitter(Actor):
             self.SendMLpre()
 
             list_matched , task = self.performMatch()
-            njs = self.perfromSubmission(list_matched, task)
+            njs = self.performSubmission(list_matched, task)
 
             stop = time.time()
             common.logger.debug("Submission Time: "+str(stop - start))
@@ -193,7 +194,7 @@ class Submitter(Actor):
 
         return matched , task
 
-    def perfromSubmission(self,matched,task):
+    def performSubmission(self,matched,task):
 
         njs=0
 
@@ -253,24 +254,20 @@ class Submitter(Actor):
         #msg += common.taskDB.dict("jobtype")+' version: '+common.taskDB.dict("codeVersion")+'\n'
         #msg += '(Hint: please check if '+common.taskDB.dict("jobtype")+' is available at the Sites)\n'
         if self.cfg_params.has_key('GRID.se_white_list'):
-            msg += '\tSE White List: '+self.cfg_params['GRID.se_white_list']+'\n'
+            msg += '\tSE White List: %s\n' % self.cfg_params['GRID.se_white_list']
         if self.cfg_params.has_key('GRID.se_black_list'):
-            msg += '\tSE Black List: '+self.cfg_params['GRID.se_black_list']+'\n'
+            msg += '\tSE Black List: %s\n' % self.cfg_params['GRID.se_black_list']
         if self.cfg_params.has_key('GRID.ce_white_list'):
-            msg += '\tCE White List: '+self.cfg_params['GRID.ce_white_list']+'\n'
+            msg += '\tCE White List: %s\n' % self.cfg_params['GRID.ce_white_list']
         if self.cfg_params.has_key('GRID.ce_black_list'):
-            msg += '\tCE Black List: '+self.cfg_params['GRID.ce_black_list']+'\n'
+            msg += '\tCE Black List: %s\n' % self.cfg_params['GRID.ce_black_list']
         removeDefBL = self.cfg_params.get('GRID.remove_default_blacklist',0)
-        if removeDefBL == '0':
-            msg += '\tNote:  All CMS T1s are BlackListed by default \n'
+
         msg += '\t(Hint: By whitelisting you force the job to run at this particular site(s).\n'
-        msg += '\tPlease check if:\n'
+        msg += '\tPlease check that:\n'
         msg += '\t\t -- the dataset is available at this site\n'
-        msg += '\t\t -- the CMSSW version is available at this site\n'
-        msg += '\t\t -- grid submission to CERN & FNAL CAFs is not allowed)\n'
-        msg += '\tPlease also look at the Site Status Page for CMS sites,\n'
-        msg += '\t  to check if the sites hosting your data are ok\n'
-        msg += '\t  http://dashb-ssb.cern.ch/dashboard/request.py/siteviewhome\n'
+        msg += '\t\t -- the dataset is actually on disk, not tape \n'
+        msg += '\t\t -- your black/white lists are OK \n'
         common.logger.info(msg)
 
         return

@@ -10,6 +10,7 @@ import statvfs
 from subprocess import Popen, PIPE, STDOUT
 
 import common
+
 from crab_exceptions import CrabException
 from ServerConfig import *
 
@@ -971,4 +972,3 @@ if __name__ == '__main__':
     print list
     cksum = makeCksum("crab_util.py")
     print cksum
-

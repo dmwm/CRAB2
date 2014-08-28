@@ -5,6 +5,7 @@ __version__ = "$Revision: 1.400 $"
 from JobType import JobType
 from crab_exceptions import *
 from crab_util import *
+from NodeNameUtils import *
 import common
 import re
 import Scram
@@ -16,9 +17,12 @@ try:
 except:
     import simplejson as json
 
+import cjson
+import subprocess
+import os
+
 from IMProv.IMProvNode import IMProvNode
 from IMProv.IMProvLoader import loadIMProvFile
-from WMCore.SiteScreening.BlackWhiteListParser import SEBlackWhiteListParser
 
 import os, string, glob
 from xml.dom import pulldom
@@ -245,61 +249,70 @@ class Cmssw(JobType):
 
         self.conf = {}
         self.conf['pubdata'] = None
-        # number of jobs requested to be created, limit obj splitting DD
-        #DBSDLS-start
-        ## Initialize the variables that are extracted from DBS/DLS and needed in other places of the code
-        self.maxEvents=0  # max events available   ( --> check the requested nb. of evts in Creator.py)
-        self.DBSPaths={}  # all dbs paths requested ( --> input to the site local discovery script)
-        self.jobDestination=[]  # Site destination(s) for each job (list of lists)
+
         ## Perform the data location and discovery (based on DBS/DLS)
-        ## SL: Don't if NONE is specified as input (pythia use case)
+        # fills blockSites dictionary: Key= block name Value=list of site names 
+
         blockSites = {}
-#wmbs
-        self.automation = int(self.cfg_params.get('WMBS.automation',0))
-        if self.automation == 0:
-            self.seListParser= SEBlackWhiteListParser(logger=common.logger())
-            if self.datasetPath:
-                blockSites = self.DataDiscoveryAndLocation(cfg_params)
-            #DBSDLS-end
-            # insert here site override from crab.cfg
-            # note that b/w lists will still be applied
-            if cfg_params.has_key('GRID.data_location_override'):
-                sitesOverride = cfg_params['GRID.data_location_override'].split(',')
-                common.logger.info("DataSite overridden by user to: %s" % sitesOverride)
-                seOverride = self.seListParser.expandList(sitesOverride)
-                # beware SiteDB V2 API, cast unicode to string
-                seOverride = map(lambda x:str(x), seOverride)
-                common.logger.info("DataLocation overridden by user to: %s\n" % seOverride)
-                for block in blockSites.keys():
-                    blockSites[block] = seOverride
-
-            self.conf['blockSites']=blockSites
             
-            ## Select Splitting
-            splitByRun = int(cfg_params.get('CMSSW.split_by_run',0))
+        if self.datasetPath:
+            blockSites = self.DataDiscoveryAndLocation(cfg_params)
 
-            if self.selectNoInput:
-                if self.pset == None:
-                    self.algo = 'ForScript'
-                else:
-                    self.algo = 'NoInput'
-                    self.conf['managedGenerators']=self.managedGenerators
-                    self.conf['generator']=self.generator
-            elif self.ads or self.lumiMask or self.lumiParams:
-                self.algo = 'LumiBased'
-                if splitByRun:
-                    msg = "Cannot combine split by run with lumi_mask, ADS, " \
-                          "or lumis_per_job. Use split by lumi mode instead."
-                    raise CrabException(msg)
+        # insert here location override from crab.cfg
+        # note that b/w lists will still be applied
+        if cfg_params.has_key('GRID.data_location_override'):
+            data_location_override = cfg_params['GRID.data_location_override'].split(',')
+            # expand to a list of PNNs
+            try:
+                pnnOverride = expandIntoListOfPhedexNodeNames(data_location_override)
+            except:
+                import sys
+                msg = "ERROR invalid parameter format in crab config file"
+                msg += "\ndata_location_override = %s" % cfg_params['GRID.data_location_override']
+                msg += "\n%s"%str(sys.exc_info()[1])
+                raise CrabException(msg)
+                  
+            common.logger.info("DataLocations overridden by user to: %s\n" % pnnOverride)
+            for block in blockSites.keys():
+                blockSites[block] = pnnOverride
+                
+        # go from a list of  PhedexNodeName to a list of ProcessingSiteName
+        # new CMS lingo: PNN = PhEDEx Node Name   PSN = Processing Site Name
+        # from now on only Processing Site Names are used throught crab
+        pnn2psn = getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB()
 
-            elif splitByRun ==1:
-                self.algo = 'RunBased'
+        for block in blockSites.keys():
+            PNNs = blockSites[block]
+            PSNs = [pnn2psn[pnn] for pnn in PNNs if pnn in pnn2psn.keys()]
+            blockSites[block] = PSNs
+
+        self.conf['blockSites']=blockSites
+
+        ## Select Splitting
+        splitByRun = int(cfg_params.get('CMSSW.split_by_run',0))
+
+        if self.selectNoInput:
+            if self.pset == None:
+                self.algo = 'ForScript'
             else:
-                self.algo = 'EventBased'
-            common.logger.debug("Job splitting method: %s" % self.algo)
+                self.algo = 'NoInput'
+                self.conf['managedGenerators']=self.managedGenerators
+                self.conf['generator']=self.generator
+        elif self.ads or self.lumiMask or self.lumiParams:
+            self.algo = 'LumiBased'
+            if splitByRun:
+                msg = "Cannot combine split by run with lumi_mask, ADS, " \
+                    "or lumis_per_job. Use split by lumi mode instead."
+                raise CrabException(msg)
 
-            splitter = JobSplitter(self.cfg_params,self.conf)
-            self.dict = splitter.Algos()[self.algo]()
+        elif splitByRun ==1:
+            self.algo = 'RunBased'
+        else:
+            self.algo = 'EventBased'
+        common.logger.debug("Job splitting method: %s" % self.algo)
+
+        splitter = JobSplitter(self.cfg_params,self.conf)
+        self.dict = splitter.Algos()[self.algo]()
 
         self.argsFile= '%s/arguments.xml'%common.work_space.shareDir()
         self.rootArgsFilename= 'arguments'
@@ -403,10 +416,13 @@ class Cmssw(JobType):
 
 
     def DataDiscoveryAndLocation(self, cfg_params):
+        #
+        # returns :
+        # sites = dictionary with keys = blocks and value = list of site names
 
         import DataDiscovery
         import DataLocation
-        common.logger.log(10-1,"CMSSW::DataDiscoveryAndLocation()")
+        common.logger.log(10-1,"CMSSW::DataDiscoveryAndLoos.environ['X509_USER_PROXY']cation()")
 
         datasetPath=self.datasetPath
 
@@ -426,6 +442,7 @@ class Cmssw(JobType):
             msg = 'ERROR ***: failed Data Discovery in DBS :  %s'%ex.getErrorMessage()
             raise CrabException(msg)
 
+        ## filesbyblock is a dictionary: keys are blocknames, values are list of LFN's
         self.filesbyblock=self.pubdata.getFiles()
         self.conf['pubdata']=self.pubdata
 
@@ -438,17 +455,21 @@ class Cmssw(JobType):
             dataloc.fetchDLSInfo()
 
         except DataLocation.DataLocationError , ex:
-            msg = 'ERROR ***: failed Data Location in DLS \n %s '%ex.getErrorMessage()
+            msg = 'ERROR ***: failed Data Location lookup \n %s '%ex.getErrorMessage()
             raise CrabException(msg)
 
 
         unsorted_sites = dataloc.getSites()
+        # unsorted sites is a dictionary. key is block name, value is a list of sites.
+
+        # add the site lists to DBS block list
         sites = self.filesbyblock.fromkeys(self.filesbyblock,'')
-        for lfn in self.filesbyblock.keys():
-            if unsorted_sites.has_key(lfn):
-                sites[lfn]=unsorted_sites[lfn]
+
+        for block in self.filesbyblock.keys():
+            if unsorted_sites.has_key(block):
+                sites[block]=unsorted_sites[block]
             else:
-                sites[lfn]=[]
+                sites[block]=[]
 
         if len(sites)==0:
             msg = 'ERROR ***: no location for any of the blocks of this dataset: \n\t %s \n'%datasetPath
@@ -456,12 +477,15 @@ class Cmssw(JobType):
             msg += "\tPlease check DataDiscovery page https://cmsweb.cern.ch/dbs_discovery/\n"
             raise CrabException(msg)
 
-        allSites = []
-        listSites = sites.values()
-        for listSite in listSites:
-            for oneSite in listSite:
-                allSites.append(oneSite)
-        [allSites.append(it) for it in allSites if not allSites.count(it)]
+        
+    # SB: this appears broken bad code
+        #allSites = []
+        #listSites = sites.values()
+        #for listSite in listSites:
+        #    for oneSite in listSite:
+        #        allSites.append(oneSite)
+        #[allSites.append(it) for it in allSites if not allSites.count(it)]
+     # anyhow allSites is not used anywhere (so SB commented it on Aug 13, 2014)
 
 
         # screen output
@@ -559,11 +583,7 @@ class Cmssw(JobType):
         return
 
     def numberOfJobs(self):
-#wmbs
-        if self.automation==0:
-           return self.dict['njobs']
-        else:
-           return None
+        return self.dict['njobs']
 
     def getTarBall(self, exe):
         """
