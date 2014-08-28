@@ -610,7 +610,7 @@ def getLocalDomain(self):
     tmp=socket.getfqdn()
     dot=string.find(tmp,'.')
     if (dot==-1):
-        msg='Unkown domain name. Cannot use local scheduler'
+        msg='Unknown domain name. Cannot use local scheduler'
         raise CrabException(msg)
     localDomainName = string.split(tmp,'.',1)[-1]
     return localDomainName

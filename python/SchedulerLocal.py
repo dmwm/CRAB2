@@ -1,6 +1,7 @@
 from Scheduler import Scheduler
 from crab_exceptions import *
 from crab_util import getLocalDomain
+from NodeNameUtils import getListOfPSNsForThisDomain
 import common
 from PhEDExDatasvcInfo import PhEDExDatasvcInfo
 
@@ -28,8 +29,9 @@ class SchedulerLocal(Scheduler) :
         if (cfg_params.has_key(self.name()+'.env_id')): self.environment_unique_identifier = cfg_params[self.name()+'.env_id']
         ## is this ok?
         localDomainName = getLocalDomain(self)
+        localPSNs = getListOfPSNsForThisDomain(localDomainName)
         if not cfg_params.has_key('GRID.se_white_list'):
-            cfg_params['GRID.se_white_list']=localDomainName
+            cfg_params['GRID.se_white_list']=localPSNs
             common.logger.info("Your domain name is "+str(localDomainName)+": only local dataset will be considered")
         else:
             common.logger.info("Your se_white_list is set to "+str(cfg_params['GRID.se_white_list'])+": only local dataset will be considered")
