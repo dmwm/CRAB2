@@ -45,7 +45,8 @@ class Scheduler :
                               'REMOTEGLIDEIN'  : 'srm-lcg',  \
                               'SGE'      : 'srm-lcg', \
                               'ARC'      : 'srm-lcg', \
-                              'PBSV2'    : 'srm-lcg',
+                              'PBSV2'    : 'srm-lcg', \
+                              'SLURM'    : 'srm-lcg',
                             }
 
         self.protocolOpt = { 'rfio' : '', \

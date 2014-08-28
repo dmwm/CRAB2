@@ -151,9 +151,19 @@ class SchedulerArc(SchedulerGrid):
         """
         Return an xRSL-code snippet with required runtime environments
         """
+        cmssw_rte_specified = False
         xrsl = ""
         for t in self.tags():
             xrsl += "(runTimeEnvironment=%s)" % t
+            if t.find("APPS/HEP/CMSSW") >= 0:
+                cmssw_rte_specified = True
+
+        # Make sure we ask for at least one APPS/HEP/CMSSW-* RTE. It
+        # doesn't matter much which one, since the important stuff they do
+        # is version independent.
+        if not cmssw_rte_specified:
+            xrsl += "(runTimeEnvironment>=APPS/HEP/CMSSW-1.0.0)"
+
         return xrsl
 
 

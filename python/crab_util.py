@@ -466,7 +466,7 @@ def getUserName():
     """
     extract user name from either SiteDB or Unix
     """
-    if common.scheduler.name().upper() in ['LSF', 'CAF', 'SGE', 'PBS','PBSV2']:
+    if common.scheduler.name().upper() in ['LSF', 'CAF', 'PBS','PBSV2', 'SLURM']:
         common.logger.log(10-1, "Using as username the Unix user name")
         userName = unixUserName()
     else :
@@ -951,8 +951,8 @@ def verify_dbs_url(self) :
     # if local scope DBS is selected, make sure dataset tier is one which
     # is expected to be born there !
     tiers_for_local_scope_dbs = ['USER']
-    if dbs3_url in [local_dbs3_01, local_dbs3_02, local_dbs3_03] :
-        datasetPath = self.cfg_params['CMSSW.datasetpath']
+    datasetPath = self.cfg_params['CMSSW.datasetpath']
+    if datasetPath.upper() != 'NONE'  and dbs3_url in [local_dbs3_01, local_dbs3_02, local_dbs3_03] :
         tier = datasetPath.split('/')[-1]
         if not tier in tiers_for_local_scope_dbs :
             msg = "ERROR: local scope DBS instance %s" % dbs3_url

@@ -352,7 +352,7 @@ class Submitter(Actor):
                 rb = str(task['serverName'])
                 jobId = str(jj) + '_https://' + str(jid)
                 msg += ('JobID for ML monitoring is created for REMOTEGLIDEIN scheduler: %s\n'%str(jobId))
-            elif common.scheduler.name().upper() in ['LSF', 'CAF', 'PBS']:
+            elif common.scheduler.name().upper() in ['LSF', 'CAF', 'PBS', 'SLURM']:
                 jobId= str(jj) + "_https://"+common.scheduler.name().upper()+":/"+jid+"-"+string.replace(str(task['name']),"_","-")
                 msg += ('JobID for ML monitoring is created for %s scheduler: %s\n'%(common.scheduler.name().upper(), str(jobId)) )
                 rb = common.scheduler.name()

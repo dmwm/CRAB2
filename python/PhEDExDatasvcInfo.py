@@ -304,7 +304,7 @@ class PhEDExDatasvcInfo:
                 msg+='       OriginalSubmission: stageout path is not retrieved from %s \n'%fullurl
                 raise CrabException(msg)
         else:
-            if self.sched in ['CAF','LSF','PBS'] :
+            if self.sched in ['CAF','LSF','PBS', 'SLURM'] :
                 if (self.user_se_path[-1]=='/') and (self.lfn[0]=='/'):
                     stageoutpfn = self.user_se_path+(self.lfn).lstrip('/') 
                 else:             
