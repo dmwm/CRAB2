@@ -3,7 +3,7 @@ import os, string, re
 import common
 import json
 import cjson
-import subprocess
+import commands
 from DLSInfo import *
 
 # ####################################
@@ -57,7 +57,7 @@ class DataLocation:
 
         try:
             j=None
-            j=subprocess.check_output(cmd,shell=True)
+            status, j = commands.getstatusoutput(cmd)
             dict=json.loads(j)
         except:
             import sys
@@ -86,7 +86,7 @@ class DataLocation:
 
         try:
             j=None
-            j=subprocess.check_output(cmd,shell=True)
+            status, j = commands.getstatusoutput(cmd)
             dict=json.loads(j)
         except:
             import sys
@@ -115,7 +115,7 @@ class DataLocation:
 
         try:
             j=None
-            j=subprocess.check_output(cmd,shell=True)
+            status, j = commands.getstatusoutput(cmd)
             dict=json.loads(j)
         except:
             import sys
@@ -144,7 +144,7 @@ class DataLocation:
         common.logger.debug("Retrieve PNNs type with\n%s" % cmd)
         try:
             cj=None
-            cj=subprocess.check_output(cmd,shell=True)
+            status, cj = commands.getstatusoutput(cmd)
             dict=cjson.decode(cj)
         except:
             import sys

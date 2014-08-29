@@ -7,11 +7,11 @@
 #
 ########################################################
 #
-import subprocess
 import json
 import cjson
 import Lexicon
 import sys
+import commands
 from crab_exceptions import *
 from Downloader import Downloader
 import common
@@ -40,7 +40,7 @@ def  expandIntoListOfPhedexNodeNames(location_list):
     cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
     try:
         j = None
-        j = subprocess.check_output(cmd,shell=True)
+        status, j = commands.getstatusoutput(cmd)
         nodeDict = json.loads(j)
     except:
         msg = "ERROR in $CRABPYTHON/cms_cmssw.py trying to retrieve Phedex Node list  with\n%s" %cmd
@@ -66,7 +66,7 @@ def getMapOfPhedexNodeName2ProcessingNodeNameFromSiteDB():
 
     cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "https://cmsweb.cern.ch/sitedb/data/prod/data-processing"'
     try:
-        cj = subprocess.check_output(cmd,stderr=subprocess.STDOUT,shell=True)
+        status, cj = commands.getstatusoutput(cmd)
     except :
         msg = "ERROR trying to talk to SiteDB\n%s"%str(sys.exc_info()[1])
         raise CrabException(msg)
