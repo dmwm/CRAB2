@@ -5,6 +5,7 @@ __version__ = "$Revision: 1.61 $"
 import common
 from crab_exceptions import *
 from crab_util import *
+from NodeNameUtils import getListOfPSNsForThisDomain
 
 from WMCore.DataStructs.File import File
 from WMCore.DataStructs.Fileset import Fileset
@@ -30,6 +31,18 @@ class JobSplitter:
         self.limitNJobs = False
         self.limitTotalLumis = False
         self.limitJobLumis = False
+
+        ## for local schedulers, remove non-local locations
+        if cfg_params['CRAB.scheduler'].upper() in ['CAF', 'CONDOR', 'LSF', 'PBS', 'PBSV2', 'SLURM', 'SGE'] :
+            # GRID.se_white_list defaults to local PSNs via SchedulerLocal.py    
+            allowedPSNs = cfg_params['GRID.se_white_list']
+            blockSites=args['blockSites']
+            for block,sites in blockSites.iteritems():
+                newSites=[]
+                for site in sites:
+                    if site in allowedPSNs: newSites.append(site)
+                blockSites[block] = newSites
+            args['blockSites']=blockSites
 
         ## check if has been asked for a non default file to store/read analyzed fileBlocks
         defaultName = common.work_space.shareDir()+'AnalyzedBlocks.txt'
