@@ -171,7 +171,7 @@ class JobSplitter:
                 msg = 'You are selecting no_block_boundary=1 which requires to choose one and only one site.\n'
                 msg += "\tPlease set se_white_list with the site's storage element name."
                 raise  CrabException(msg)
-            blockSites = self.ComputeSubBlockSites(blockSites)
+            #blockSites = self.ComputeSubBlockSites(blockSites)
 
         # ---- Handle the possible job splitting configurations ---- #
         if (self.selectTotalNumberEvents):
@@ -810,8 +810,8 @@ class JobSplitter:
 
         saveFblocks=''
         for i in range(len(blocks)):
-            sites=self.blackWhiteListParser.checkWhiteList(self.blackWhiteListParser.checkBlackList(destinations[i]))
-            if len(sites) != 0:
+            #sites=self.blackWhiteListParser.checkWhiteList(self.blackWhiteListParser.checkBlackList(destinations[i]))
+            #if len(sites) != 0:
                 for block in blocks[i]:
                     saveFblocks += str(block)+'\n'
         writeTXTfile(self, self.fileBlocks_FileName , saveFblocks)
