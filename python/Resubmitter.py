@@ -26,7 +26,7 @@ class Resubmitter(Submitter):
 
         if self.copy_data==1: 
             stageout = PhEDExDatasvcInfo(self.cfg_params)
-            endpoint, lfn, SE, SE_PATH, user = stageout.getEndpoint()
+            endpoint, PNN, lfn, SE, SE_PATH, user = stageout.getEndpoint()
             common.scheduler.checkRemoteDir(endpoint,eval(task['outfileBasename']))
 
 

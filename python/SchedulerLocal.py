@@ -114,7 +114,7 @@ class SchedulerLocal(Scheduler) :
         if int(self.copy_data) == 1:
 
             stageout = PhEDExDatasvcInfo(self.cfg_params)
-            endpoint, lfn, SE, SE_PATH, user = stageout.getEndpoint()
+            endpoint, PNN, lfn, SE, SE_PATH, user = stageout.getEndpoint()
             print "endpoint = ", endpoint
 
             ########################################################

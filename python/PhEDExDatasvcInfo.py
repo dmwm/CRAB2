@@ -147,7 +147,7 @@ class PhEDExDatasvcInfo:
         #print "    endpoint = ", endpoint
         ##############################
 
-        return endpoint, self.lfn , SE, SE_PATH, User         
+        return endpoint, self.node, self.lfn , SE, SE_PATH, User         
        
     def splitEndpoint(self, endpoint):
         '''
