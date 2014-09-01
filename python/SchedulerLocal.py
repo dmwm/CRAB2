@@ -30,6 +30,8 @@ class SchedulerLocal(Scheduler) :
         ## is this ok?
         localDomainName = getLocalDomain(self)
         localPSNs = getListOfPSNsForThisDomain(localDomainName)
+        # turn list to a string as in crab.cfg
+        localPSNs = ",".join(localPSNs)
         if not cfg_params.has_key('GRID.se_white_list'):
             cfg_params['GRID.se_white_list']=localPSNs
             common.logger.info("Your domain name is "+str(localDomainName)+": only local dataset will be considered")
