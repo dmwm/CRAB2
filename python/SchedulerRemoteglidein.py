@@ -153,9 +153,6 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         blackList =  parseIntoList(self.cfg_params.get("GRID.se_black_list", []))
         whiteList =  parseIntoList(self.cfg_params.get("GRID.se_white_list", []))
 
-        #raise Exception
-        #a=1/0
-        
         psnDest = cleanPsnListForBlackWhiteLists(psnDest, blackList, whiteList)
         if not psnDest or psnDest == [] or psnDest == ['']:
             msg = "No Processing Site Name after applying black/white list."
@@ -163,14 +160,12 @@ class SchedulerRemoteglidein(SchedulerGrid) :
             common.logger.info(msg)
             raise CrabException(msg)
 
+        # condor's JDL needs a string of CSV's, not a list
+        psnDest = ",".join(psnDest)
         msg = "list of PSN's for submission: %s" % psnDest
         common.logger.info(msg)
 
         jobParams += '+DESIRED_Sites = "%s";' % psnDest
-
-        #raise Exception
-        #a=1/0
-
 
         scram = Scram.Scram(None)
         cmsVersion = scram.getSWVersion()
