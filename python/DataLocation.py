@@ -68,6 +68,7 @@ class DataLocation:
             raise CrabException(msg)
         
         blockLocations=dict['phedex']['block']
+
         # blockLocations is a list of dictionaries, one per block
         # format of each entry is like
         # {u'name': u'/SingleMu/Run2012B-TOPMuPlusJets-22Jan2013-v1/AOD#42cbaf9c-715f-11e2-af21-00221959e72f',
