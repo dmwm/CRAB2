@@ -289,9 +289,11 @@ class SchedulerGrid(Scheduler):
 
         if int(self.copy_data) == 1:
             stageout = PhEDExDatasvcInfo(self.cfg_params)
-            endpoint, lfn, SE, SE_PATH, user = stageout.getEndpoint()
+            endpoint, PNN, lfn, SE, SE_PATH, user = stageout.getEndpoint()
             if self.check_RemoteDir == 1 :
                 self.checkRemoteDir(endpoint,jbt.outList('list') )
+            txt += 'export PNN='+PNN+'\n'
+            txt += 'echo "PNN = $PNN"\n'
             txt += 'export SE='+SE+'\n'
             txt += 'echo "SE = $SE"\n'
             txt += 'export SE_PATH='+SE_PATH+'\n'

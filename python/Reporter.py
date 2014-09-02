@@ -107,7 +107,7 @@ class Reporter(Actor):
             from PhEDExDatasvcInfo import PhEDExDatasvcInfo
 
             stageout = PhEDExDatasvcInfo(self.cfg_params)
-            endpoint, lfn, SE, SE_PATH, user = stageout.getEndpoint()
+            endpoint, PNN, lfn, SE, SE_PATH, user = stageout.getEndpoint()
             #print endpoint, lfn, SE, SE_PATH, user
 
             msg+=  "SE: %s %s  srmPath: %s\n"%(self.cfg_params['USER.storage_element'],SE,endpoint)
