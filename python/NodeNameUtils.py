@@ -345,17 +345,16 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     # appear multiple times, one for each SE/PNN combination
     
     cmd = 'curl -ks "https://cmsweb.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
-    #======= start of hack to use Tony's VM
-    # until that's available use Tony's dev. vm
+    #======= start of hack to use Tony's VM until API is available in cmsweb
     cmd = 'curl -ks "https://phedex-web-dev.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
-    # but that's availble only at CERN
+    # but that's available only at CERN
     from crab_util import getLocalDomain
     domain = getLocalDomain(True)
     if not domain == "cern.ch" :
         common.logger.info("use static se2pnn map")
         se2pnn = static_se2pnn()
         return se2pnn
-    #======= end of hack to use Tony's VM
+    #======= end of hack to deal around missing API in cmsweb
     
     try:
         j = None
