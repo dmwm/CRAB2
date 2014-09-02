@@ -340,11 +340,13 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     {'SE':'PNN', ...}
     """
 
-#when cmsweb is available, code should be:
-
+    # retrieve information from PhEDEx API and reformat
+    # if one same SE is used in more PNN's (CERN e.g.) it will
+    # appear multiple times, one for each SE/PNN combination
+    
     cmd = 'curl -ks "https://cmsweb.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
-    # until that's available use Tony's dev. vm
     #======= start of hack to use Tony's VM
+    # until that's available use Tony's dev. vm
     cmd = 'curl -ks "https://phedex-web-dev.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
     # but that's availble only at CERN
     from crab_util import getLocalDomain
@@ -353,12 +355,12 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
         common.logger.info("use static se2pnn map")
         se2pnn = static_se2pnn()
         return se2pnn
-    #======= end of hacl to use Tony's VM
+    #======= end of hack to use Tony's VM
     
     try:
         j = None
         status, j = commands.getstatusoutput(cmd)
-        dict = json.loads(j)
+        phedexDict = json.loads(j)
     except:
         msg = "ERROR in $CRABPYTHON/cms_cmssw.py trying to retrieve Phedex SE/Node map  with\n%s" %cmd
         if j:
@@ -366,17 +368,14 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
         msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
         raise CrabException(msg)
 
-    senames=dict['phedex']['senames']
+    senameDictionaries=phedexDict['phedex']['senames']
     se2pnn={}
-    for sename in senames:
-        se = str(sename['sename'])
-        node = str(sename['node'])
-        if node.startswith('T1'):
-            disk = node.rpartition('_')[0] + '_Disk'
-            node = disk
+    for dict in senameDictionaries:
+        node = str(dict['node'])  # beware Unicode
+        # skip phedex nodes we would not submit to anyhow
         if node.startswith('T0'): continue
-        if node == 'T1_CH_CERN_Disk':
-            node = 'T2_CH_CERN'
+        if node.startswith('T1') and not node.endswith('Disk'): continue
+        se = str(dict['sename'])  # beware Unicode
         if not se in se2pnn.keys():
             se2pnn[se] = node
 
