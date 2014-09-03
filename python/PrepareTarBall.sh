@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ### $1 is the tag value CRAB_X_X_X ###
 ### the second argument is the BOSS version: 4_3_4-sl3-sl4 (for DBS2 publication)###
@@ -20,14 +20,43 @@ WMCOREWMtag="0.9.94"
 DBS3tag="DBS_3_2_5"
 
 
-## download CRAB from GITHUB and cleanup the code a bit
+## download CRAB from GITHUB
 echo ">> downloading CRAB tag $CRABtag from GitHub"
 git clone -b ${CRABtag} https://github.com/dmwm/CRAB2.git $CRABdir
+status=$?
+if [ $status != 0 ]
+then
+    echo ERROR
+    echo "git clone -b ${CRABtag} FAILED"
+    exit $status
+fi
+
+# verify that tag is the same in Git and code
+pushd $CRABdir
+cd python
+ver=`grep "prog_version =" common.py`
+vernums=`echo $ver|cut -d '(' -f2|tr -d ')'|tr -d ' '`
+verN1=`echo $vernums|cut -d , -f1`
+verN2=`echo $vernums|cut -d , -f2`
+verN3=`echo $vernums|cut -d , -f3`
+verTag=`grep "prog_tag =" common.py|cut -d"'" -f2`
+CRABver=`echo "CRAB_"$verN1"_"$verN2"_"$verN3`
+if [ X$verTag != X ]
+then
+    CRABver=`echo $CRABver"_"$verTag`
+fi
+
+if [ $CRABver != $CRABtag ]
+then
+    echo "ERROR"
+    echo "requested tag $CRABtag is not the same as in common.py: $CRABver"
+    exit 1
+fi
 
 
 
+# cleanup a bit
 cd $CRABdir
-
 chmod -x python/crab.py
 rm python/crab.*sh
 mv python/configure .
@@ -96,7 +125,7 @@ mv WMCore-current/src/python/WMCore/Lexicon.py ./WMCoreWM/
 rm -rf WMCore-current
 
 ## exit from external
-cd ../..
+popd
 
 tar zcf $CRABdir.tgz $CRABdir
 echo ""
