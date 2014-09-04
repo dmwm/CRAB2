@@ -6,12 +6,10 @@ if [ $# -lt 1 ]; then
   echo "Usage: `basename $0` <CRAB_X_Y_Z> "
   exit 1
 fi
-tag=$1
-echo "tag = $tag"
+CRABtag=$1
+echo "CRABtag = $CRABtag"
 
-CRABdir=$tag
-echo "CRABDIR = $CRABdir"
-CRABtag=$tag
+
 DBSAPItag="DBS_2_0_9_patch_9"
 DLSAPItag="DLS_1_1_3"
 PRODCOMMONtag="PRODCOMMON_0_12_18_CRAB_67"
@@ -22,7 +20,7 @@ DBS3tag="DBS_3_2_5"
 
 ## download CRAB from GITHUB
 echo ">> downloading CRAB tag $CRABtag from GitHub"
-git clone -b ${CRABtag} https://github.com/dmwm/CRAB2.git $CRABdir
+git clone -b ${CRABtag} https://github.com/dmwm/CRAB2.git $CRABtag
 status=$?
 if [ $status != 0 ]
 then
@@ -31,9 +29,11 @@ then
     exit $status
 fi
 
+CRABdir=`pwd`/$CRABtag
+echo "CRABdir = $CRABdir"
+
 # verify that tag is the same in Git and code
-pushd $CRABdir
-cd python
+pushd $CRABdir/python
 ver=`grep "prog_version =" common.py`
 vernums=`echo $ver|cut -d '(' -f2|tr -d ')'|tr -d ' '`
 verN1=`echo $vernums|cut -d , -f1`
@@ -52,19 +52,23 @@ then
     echo "requested tag $CRABtag is not the same as in common.py: $CRABver"
     exit 1
 fi
-
+popd
 
 
 # cleanup a bit
-cd $CRABdir
+pushd $CRABdir
+echo "==================================="
+pwd
 chmod -x python/crab.py
-rm python/crab.*sh
-mv python/configure .
-rm -rf .git
+rm -v python/crab.*sh
+mv -v python/configure .
+rm -v -rf .git
 
 ## put externals where Crab2 is used to find them
-mv externals external
+#mv -v externals external
 cd external
+pwd
+echo "==================================="
 
 ## download DBS API
 echo ">> downloading DBS API tag ${DBSAPItag} from GitHub/dmwm/DBSAPI"
@@ -127,6 +131,6 @@ rm -rf WMCore-current
 ## exit from external
 popd
 
-tar zcf $CRABdir.tgz $CRABdir
+tar zcf ${CRABtag}.tgz ${CRABtag}
 echo ""
-echo " tarball prepared : $CRABdir.tgz "
+echo " tarball prepared : ${CRABtag}.tgz "
