@@ -810,6 +810,7 @@ class cmscp:
         else:   
             jobStageInfo['for_lfn']=self.params['for_lfn']
         jobStageInfo['se_name']=self.params['se_name']
+        jobStageInfo['PNN'] = self.params['PNN']
         jobStageInfo['endpoint']=self.hostname
         ### ADDING SURLFORGRID FOR COPYDATA
         if not self.params['surl_for_grid']: self.params['surl_for_grid']=''
@@ -933,7 +934,7 @@ if __name__ == '__main__' :
 
     allowedOpt = ["source=", "destination=", "inputFileList=", "outputFileList=", \
                   "protocol=","option=", "middleware=", "srm_version=", \
-                  "destinationDir=", "for_lfn=", "local_stage", "debug", "help", "se_name="]
+                  "destinationDir=", "for_lfn=", "local_stage", "debug", "help", "PNN=", "se_name="]
     try:
         opts, args = getopt.getopt( sys.argv[1:], "", allowedOpt )
     except getopt.GetoptError, err:
