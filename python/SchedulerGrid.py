@@ -311,7 +311,7 @@ class SchedulerGrid(Scheduler):
             cmscp_args = ' --destination $endpoint --inputFileList $file_list'
             ### FEDE FOR MULTI ### 
             #cmscp_args +=' --middleware $middleware --lfn $LFNBaseName %s %s '%(self.loc_stage_out,self.debugWrap)
-            cmscp_args +=' --middleware $middleware --se_name $SE --for_lfn $LFNBaseName %s %s '%(self.loc_stage_out,self.debugWrap)
+            cmscp_args +=' --middleware $middleware --PNN $PNN --se_name $SE --for_lfn $LFNBaseName %s %s '%(self.loc_stage_out,self.debugWrap)
             if self.space_token:
                 cmscp_args +=' --option space_token=%s'%str(self.space_token)
             txt += 'echo "python cmscp.py %s "\n'%cmscp_args
