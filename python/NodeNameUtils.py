@@ -266,7 +266,7 @@ def applyGloablBlackList(cfg_params):
     if int(removeBList) == 0:
         try:
             blacklist = Downloader("http://cmsdoc.cern.ch/cms/LCG/crab/config/")
-            result = blacklist.config("site_black_list.conf").strip().split(',')
+            result = blacklist.config("site_black_list.conf")
         except:            
             msg = "ERROR talking to cmsdoc\n%s"%str(sys.exc_info()[1])
             common.logger.info(msg)
@@ -278,7 +278,7 @@ def applyGloablBlackList(cfg_params):
         else:
             common.logger.info("WARNING: Skipping default black list!")
     if blackAnaOps:
-        blackUser = cfg_params.get("GRID.se_black_list", [] )
+        blackUser = cfg_params.get("GRID.se_black_list", '' )
         cfg_params['GRID.se_black_list'] = blackUser + blackAnaOps 
 
 
