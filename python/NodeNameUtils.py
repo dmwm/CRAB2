@@ -351,7 +351,7 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     from crab_util import getLocalDomain
     domain = getLocalDomain(True)
     if not domain == "cern.ch" :
-        common.logger.info("use static se2pnn map")
+        common.logger.info("use static map for se2pnn")
         se2pnn = static_se2pnn()
         return se2pnn
     #======= end of hack to deal around missing API in cmsweb

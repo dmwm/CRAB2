@@ -182,11 +182,11 @@ class DataLocation:
                 common.logger.info("Dataset in global DBS without location information")
             else:
                 common.logger.info("Use origin site location recorded in local scope DBS")
-                blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
                 try:
                     blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
                 except:
-                    msg = "CAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
+                    msg = "Exception raised in DataLocation by getBlockSitesFromLocalDBS3"
+                    msg += "\nCAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
                     raise CrabException(msg)
 
         self.SelectedSites = blockSites
