@@ -279,8 +279,12 @@ def applyGloablBlackList(cfg_params):
             common.logger.info("WARNING: Skipping default black list!")
     if blackAnaOps:
         blackUser = cfg_params.get("GRID.se_black_list", '' )
-        cfg_params['GRID.se_black_list'] = blackUser + blackAnaOps 
-
+        if blackUser:
+            cfg_params['GRID.se_black_list'] = blackUser + ',' + blackAnaOps 
+        else:
+            cfg_params['GRID.se_black_list'] = blackAnaOps
+        msg = "PSN black list: %s" % cfg_params['GRID.se_black_list']
+        common.logger.info(msg)
 
 def validateSiteName(site):
     """
