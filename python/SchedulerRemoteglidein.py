@@ -157,6 +157,8 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         if not psnDest or psnDest == [] or psnDest == ['']:
             msg = "No Processing Site Name after applying black/white list."
             msg += " Can't submit"
+            msg += "\nUsed Black List: %s" % blackList
+            msg += "\nUsed White List: %s" % whiteList
             common.logger.info(msg)
             raise CrabException(msg)
 
