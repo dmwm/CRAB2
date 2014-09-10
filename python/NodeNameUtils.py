@@ -276,7 +276,7 @@ def applyGloablBlackList(cfg_params):
             common.logger.info("WARNING: Could not download default site black list")
             result = []
         if result :
-            blackAnaOps = result
+            blackAnaOps = result.strip()
             common.logger.debug("Enforced black list: %s "%blackAnaOps)
         else:
             common.logger.info("WARNING: Skipping default black list!")
