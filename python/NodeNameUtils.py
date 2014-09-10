@@ -242,11 +242,14 @@ def cleanPsnListForBlackWhiteLists(inputList, blackList, whiteList):
     All arguments must be passed as LIST (not strings)
     """
 
+    # beware: not touch list we are iterating on, make a deep copy
     tmpList = list(inputList)
+
     for dest in inputList:
         for black in blackList:
             if dest.startswith(black) :
-                tmpList.remove(dest)
+                if dest in tmpList:
+                    tmpList.remove(dest)
 
     if not whiteList:
         cleanedList = tmpList
