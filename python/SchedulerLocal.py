@@ -142,6 +142,8 @@ class SchedulerLocal(Scheduler) :
             txt += '# COPY OUTPUT FILE TO '+SE_PATH+ '\n'
             txt += '#\n\n'
 
+            txt += 'export PNN='+PNN+'\n'
+            txt += 'echo "PNN = $PNN"\n'
             txt += 'export SE='+SE+'\n'
             txt += 'echo "SE = $SE"\n'
             txt += 'export SE_PATH='+SE_PATH+'\n'
@@ -164,7 +166,7 @@ class SchedulerLocal(Scheduler) :
             cmscp_args += ' --destination $endpoint --inputFileList $file_list'
             #######################################################
             #######################################################
-            cmscp_args +=' --middleware $middleware --se_name $SE --for_lfn $LFNBaseName %s %s '%(self.loc_stage_out,self.debugWrap)
+            cmscp_args +=' --middleware $middleware --PNN $PNN --se_name $SE --for_lfn $LFNBaseName %s %s '%(self.loc_stage_out,self.debugWrap)
             txt += 'echo "python cmscp.py %s "\n'%cmscp_args
             txt += 'python cmscp.py %s \n'%cmscp_args
             if self.debug_wrapper==1:
