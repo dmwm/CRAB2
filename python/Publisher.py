@@ -496,16 +496,22 @@ class Publisher(Actor):
                 fileDic['lfn']=outFile['LFN']
                 fileDic['filesize']=outFile['Size']
                 fileDic['runlumi']=outFile['Runs']
+                if outFile['PNN']:
+                    origin = outFile['PNN']
+                else:
+                    origin = outFile['SEName']
+
                 # beware duplicate parents in FJR and parent='' when FJR had no LFN
                 fileDic['parents']=[p for p in set(outFile.parentLFNs()) if p]
+                # there can be only one originSite in one block
                 if originSite:
-                    if outFile['PNN'] != originSite:
+                    if origin != originSite:
                         msg = "ERROR: not all files to be published have same location"
                         msg += "file %s has origin %s, while previous files have %s\n" %\
-                            (outFile['LFN'], outFile['PNN'], originSite)
+                            (outFile['LFN'], origin, originSite)
                         raise CrabException(msg)
                 else:
-                    originSite = outFile['PNN']
+                    originSite = origin
                 fileDic['inevents']=outFile['TotalEvents']
 
                 toPublish[outdataset].append(fileDic)    # add dictionary to files list
