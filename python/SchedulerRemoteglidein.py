@@ -199,7 +199,7 @@ class SchedulerRemoteglidein(SchedulerGrid) :
         jobParams += '+DESIRED_Archs ="' +cmsArch+'";'
 
         userName = gethnUserNameFromSiteDB()
-        jobParams += '+AccountingGroup ="' + userName+'";'
+        jobParams += '+AccountingGroup = "analysis.%s";' % userName
         
         myscheddName = self.remoteHost
 
