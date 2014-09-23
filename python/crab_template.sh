@@ -31,6 +31,22 @@ dumpStatus() {
     echo "MonitorID=`echo $MonitorID`" >> $1
 }
 
+amIanOverflowJob() {
+# check if this is a job which glideinWMS scheduled to a site not among the submission list
+OverflowFlag=0
+echo \$_CONDOR_JOB_AD =${_CONDOR_JOB_AD}
+if [ "X$_CONDOR_JOB_AD" != "X" ]; then
+    DESIRED_Sites=`grep '^DESIRED_Sites =' $_CONDOR_JOB_AD | tr -d '"' | awk '{print $NF;}'|tr ',' ' '`
+    JOB_CMSSite=`grep '^JOB_CMSSite =' $_CONDOR_JOB_AD | tr -d '"' | awk '{print $NF;}'`
+    OverflowFlag=1
+    for site in $DESIRED_Sites; do
+      if [ "$site" = "$JOB_CMSSite" ]; then
+	  OverflowFlag=0
+      fi
+    done
+fi
+}
+
 
 ### REMOVE THE WORKING_DIR IN OSG SITES ###
 remove_working_dir() {
@@ -119,6 +135,7 @@ export RUNTIME_AREA
 echo "Today is `date` - `date -u`"
 echo "Job submitted on host `hostname`"
 uname -a
+lsb_release -id
 echo ">>> current directory (RUNTIME_AREA): `pwd`"
 #echo ">>> current directory content:"
 #ls -Al
@@ -141,6 +158,9 @@ voms-proxy-info -all
 
 repo=jobreport.txt
 echo "WNHostName=`hostname`" | tee -a $RUNTIME_AREA/$repo
+
+amIanOverflowJob
+echo "OverflowFlag=${OverflowFlag}" | tee -a  $RUNTIME_AREA/$repo
 
 #CRAB untar_software
 
