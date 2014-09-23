@@ -371,14 +371,17 @@ class Submitter(Actor):
                 msg += ('JobID for ML monitoring is created for gLite scheduler %s\n'%str(jobId))
                 rb = str(job.runningJob['service'])
 
-            dlsDest = job['dlsDestination']
-            if len(dlsDest) == 1 :
-                T_SE=str(dlsDest[0])
-            elif len(dlsDest) == 2 :
-                T_SE=str(dlsDest[0])+','+str(dlsDest[1])
-            else :
-                T_SE=str(len(dlsDest))+'_Selected_SE'
-
+            dlsDest =  cleanPsnListForBlackWhiteLists(job['dlsDestination'], self.seBlackList, self.seWhiteList)
+            
+            T_SE=''
+            maxLen=900
+            for dest in dlsDest:
+                site = str(dest)
+                if not len(T_SE) == 0: T_SE += ','
+                T_SE += site
+                if len(T_SE) > maxLen:
+                    T_SE += ',Many_More'
+                    break
 
             infos = { 'jobId': jobId, \
                       'sid': jid, \
