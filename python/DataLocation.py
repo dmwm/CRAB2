@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, string, re
+import os, string, re, sys
 import common
 import json
 import cjson
@@ -60,7 +60,6 @@ class DataLocation:
             status, j = commands.getstatusoutput(cmd)
             dict=json.loads(j)
         except:
-            import sys
             msg = "ERROR in $CRABPYTHON/DataLocation.py trying to retrieve data locations with\n%s" %cmd
             if j:
                 msg += "\n       command stdout is:\n%s" % j
@@ -80,65 +79,7 @@ class DataLocation:
         #      {u'complete': u'y', u'node': u'T1_IT_CNAF_Buffer'}]}
 
         # retrieve from PhEDEx the storage type of each node to tell Disk from Tape
-        PhEDExUrl = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/"
-        apiUrl = PhEDExUrl + "BlockReplicaSummary?dataset=%s&complete=y" % self.datasetPath
-        cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
-        common.logger.debug("Retrieve block locations with\n%s" % cmd)
-
-        try:
-            j=None
-            status, j = commands.getstatusoutput(cmd)
-            dict=json.loads(j)
-        except:
-            import sys
-            msg = "ERROR in $CRABPYTHON/DataLocation.py trying to retrieve data locations with\n%s" %cmd
-            if j:
-                msg += "\n       command stdout is:\n%s" % j
-            msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
-            raise CrabException(msg)
-        
-        blockLocations=dict['phedex']['block']
-        # blockLocations is a list of dictionaries, one per block
-        # format of each entry is like
-        # {u'name': u'/SingleMu/Run2012B-TOPMuPlusJets-22Jan2013-v1/AOD#42cbaf9c-715f-11e2-af21-00221959e72f',
-        # u'replica': [{u'complete': u'y', u'node': u'T1_IT_CNAF_MSS'},
-        #      {u'complete': u'y', u'node': u'T3_FR_IPNL'},
-        #      {u'complete': u'y', u'node': u'T1_IT_CNAF_Disk'},
-        #      {u'complete': u'y', u'node': u'T1_US_FNAL_Disk'},
-        #      {u'complete': u'y', u'node': u'T2_US_Purdue'},
-        #      {u'complete': u'y', u'node': u'T1_IT_CNAF_Buffer'}]}
-
-        # retrieve from PhEDEx the storage type of each node to tell Disk from Tape
-        PhEDExUrl = "https://cmsweb.cern.ch/phedex/datasvc/json/prod/"
-        apiUrl = PhEDExUrl + "BlockReplicaSummary?dataset=%s&complete=y" % self.datasetPath
-        cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
-        common.logger.debug("Retrieve block locations with\n%s" % cmd)
-
-        try:
-            j=None
-            status, j = commands.getstatusoutput(cmd)
-            dict=json.loads(j)
-        except:
-            import sys
-            msg = "ERROR in $CRABPYTHON/DataLocation.py trying to retrieve data locations with\n%s" %cmd
-            if j:
-                msg += "\n       command stdout is:\n%s" % j
-            msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
-            raise CrabException(msg)
-        
-        blockLocations=dict['phedex']['block']
-        # blockLocations is a list of dictionaries, one per block
-        # format of each entry is like
-        # {u'name': u'/SingleMu/Run2012B-TOPMuPlusJets-22Jan2013-v1/AOD#42cbaf9c-715f-11e2-af21-00221959e72f',
-        # u'replica': [{u'complete': u'y', u'node': u'T1_IT_CNAF_MSS'},
-        #      {u'complete': u'y', u'node': u'T3_FR_IPNL'},
-        #      {u'complete': u'y', u'node': u'T1_IT_CNAF_Disk'},
-        #      {u'complete': u'y', u'node': u'T1_US_FNAL_Disk'},
-        #      {u'complete': u'y', u'node': u'T2_US_Purdue'},
-        #      {u'complete': u'y', u'node': u'T1_IT_CNAF_Buffer'}]}
-
-        # retrieve from PhEDEx the storage type of each node to tell Disk from Tape
-        # use cjson format this time (more convenient for the needd parsing)
+        # use cjson format this time (more convenient for the needed parsing)
         PhEDExUrl = "https://cmsweb.cern.ch/phedex/datasvc/cjson/prod/"
         apiUrl = PhEDExUrl + "nodes"
         cmd = 'curl -ks --cert $X509_USER_PROXY --key $X509_USER_PROXY "%s"' % apiUrl
@@ -148,7 +89,6 @@ class DataLocation:
             status, cj = commands.getstatusoutput(cmd)
             dict=cjson.decode(cj)
         except:
-            import sys
             msg = "ERROR in $CRABPYTHON/DataLocation.py trying to retrieve PNNs type with\n%s" %cmd
             if j:
                 msg += "\n       command stdout is:\n%s" % j
@@ -185,7 +125,8 @@ class DataLocation:
                 try:
                     blockSites = self.getBlockSitesFromLocalDBS3(dbs_url)
                 except:
-                    msg = "Exception raised in DataLocation by getBlockSitesFromLocalDBS3"
+                    msg = "Exception raised in DataLocation by getBlockSitesFromLocalDBS3:\n"
+                    msg += str(sys.exc_info()[1])
                     msg += "\nCAN'T GET LOCATION INFO FROM DBS END POINT: %s\n" % dbs_url
                     raise CrabException(msg)
 
