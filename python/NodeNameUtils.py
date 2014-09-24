@@ -352,7 +352,7 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     # appear multiple times, one for each SE/PNN combination
     
     cmd = 'curl -ks "https://cmsweb.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
-    # as of Sep 24 the neede API is available in the testbed
+    # as of Sep 24 the needed API is available in the testbed
     cmd = 'curl -ks "https://cmsweb-testbed.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
     #======= start of hack to use Tony's VM until API is available in cmsweb
     #cmd = 'curl -ks "https://phedex-web-dev.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
