@@ -352,15 +352,17 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     # appear multiple times, one for each SE/PNN combination
     
     cmd = 'curl -ks "https://cmsweb.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
+    # as of Sep 24 the neede API is available in the testbed
+    cmd = 'curl -ks "https://cmsweb-testbed.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
     #======= start of hack to use Tony's VM until API is available in cmsweb
-    cmd = 'curl -ks "https://phedex-web-dev.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
+    #cmd = 'curl -ks "https://phedex-web-dev.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
     # but that's available only at CERN
-    from crab_util import getLocalDomain
-    domain = getLocalDomain(True)
-    if not domain == "cern.ch" :
-        common.logger.info("use static map for se2pnn")
-        se2pnn = static_se2pnn()
-        return se2pnn
+    #from crab_util import getLocalDomain
+    #domain = getLocalDomain(True)
+    #if not domain == "cern.ch" :
+    #    common.logger.info("use static map for se2pnn")
+    #    se2pnn = static_se2pnn()
+    #    return se2pnn
     #======= end of hack to deal around missing API in cmsweb
     
     try:
@@ -368,7 +370,7 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
         status, j = commands.getstatusoutput(cmd)
         phedexDict = json.loads(j)
     except:
-        msg = "ERROR in $CRABPYTHON/cms_cmssw.py trying to retrieve Phedex SE/Node map  with\n%s" %cmd
+        msg = "ERROR in $CRABPYTHON/NodeUtils.py trying to retrieve Phedex SE/Node map  with\n%s" %cmd
         if j:
             msg += "\n       command stdout is:\n%s" % j
         msg += "\n       which raised:\n%s" % str(sys.exc_info()[1])
