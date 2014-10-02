@@ -44,6 +44,16 @@ class PhEDExDatasvcInfo:
         self.node = cfg_params.get('USER.storage_element',None)
 
         self.publish_data = cfg_params.get("USER.publish_data",0)
+        if self.publish_data:
+            # only accepts valid PhEDEx Node Names
+            import Lexicon
+            try:
+                Lexicon.cmsname(self.node)
+            except Exception, text:
+                msg =  "%s\n'%s' is not a valid Phedex Node Name" % (text,self.node)
+                msg += "\nOnly valid Phexex Node Names can be used as location for published data"
+                msg += "\nPlease fix storage_element parameter or set publish_data=0 in crab.cfg"
+                raise CrabException(msg)
         self.usenamespace = cfg_params.get("USER.usenamespace",0)
         self.user_remote_dir = cfg_params.get("USER.user_remote_dir",'')
         if self.user_remote_dir:
