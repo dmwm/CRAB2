@@ -202,8 +202,6 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
     # appear multiple times, one for each SE/PNN combination
     
     cmd = 'curl -ks "https://cmsweb.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
-    # as of Sep 24 the needed API is available in the testbed
-    cmd = 'curl -ks "https://cmsweb-testbed.cern.ch/phedex/datasvc/json/prod/senames?protocol=srmv2"'
     
     try:
         j = None
