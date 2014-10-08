@@ -225,6 +225,12 @@ def getMapOfSEHostName2PhedexNodeNameFromPhEDEx():
         if not se in se2pnn.keys():
             se2pnn[se] = node
 
+    # add some old SE names which we know what to do with
+    se2pnn['caf.cern.ch'] = 'T2_CH_CERN'
+    se2pnn['srm-cms.cern.ch'] = 'T2_CH_CERN'
+    se2pnn['cmssrm.fnal.gov'] = 'T1_US_FNAL_MSS'
+    se2pnn['cmsdca2.fnal.gov'] = 'T1_US_FNAL_MSS'
+
     return se2pnn
 
 def getListOfPSNsForThisDomain(fqdn):
