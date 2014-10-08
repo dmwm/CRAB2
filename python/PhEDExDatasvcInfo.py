@@ -42,20 +42,29 @@ class PhEDExDatasvcInfo:
         self.datasvc_url = cfg_params.get("USER.datasvc_url",self.datasvc_url)
         self.srm_version = cfg_params.get("USER.srm_version",'srmv2')
         self.node = cfg_params.get('USER.storage_element',None)
+        self.usenamespace = cfg_params.get("USER.usenamespace",0)
+        self.user_remote_dir = cfg_params.get("USER.user_remote_dir",'')
 
         self.publish_data = cfg_params.get("USER.publish_data",0)
-        if self.publish_data:
+        #SBSB
+        print 'self.publish_data= ', self.publish_data
+        #SBSB
+        if int(self.publish_data) == 1:
             # only accepts valid PhEDEx Node Names
             import Lexicon
             try:
                 Lexicon.cmsname(self.node)
             except Exception, text:
                 msg =  "%s\n'%s' is not a valid Phedex Node Name" % (text,self.node)
+                msg += "\n***************** NOTICE ***************"
                 msg += "\nOnly valid Phexex Node Names can be used as location for published data"
                 msg += "\nPlease fix storage_element parameter or set publish_data=0 in crab.cfg"
+                if 'group' in   self.user_remote_dir:
+                    msg += '\nIf you are trying to stage out to some /store/group area, you can do like:'
+                    msg += '\n   storage_element = T2_CH_CERN'
+                    msg += '\n   user_remote_dir = /store/group/foo/bar'
+                msg += "\n****************************************"
                 raise CrabException(msg)
-        self.usenamespace = cfg_params.get("USER.usenamespace",0)
-        self.user_remote_dir = cfg_params.get("USER.user_remote_dir",'')
         if self.user_remote_dir:
             if ( self.user_remote_dir[-1] != '/' ) : self.user_remote_dir = self.user_remote_dir + '/'
           
@@ -117,7 +126,9 @@ class PhEDExDatasvcInfo:
             #print "--->>> query with 'stageout' "
             #########################################
 
-        if not self.usePhedex: 
+        if not self.usePhedex or \
+                self.user_remote_dir.startswith('/store/user') or \
+                self.user_remote_dir.startswith('/store/group') :
             self.forced_path = self.user_remote_dir
         return
  
@@ -125,7 +136,9 @@ class PhEDExDatasvcInfo:
         '''
         Return full SE endpoint and related infos
         '''
+        print "SB--------- IN getEndpoint ---------------"
         self.lfn = self.getLFN()
+        print "SB self.LFN = ", self.lfn
 
         if int(self.publish_data) == 1 :
             try:
@@ -192,8 +205,10 @@ class PhEDExDatasvcInfo:
         """
         define the LFN composing the needed pieces
         """
+        print "SB---------- in getLFN ---------------"
         lfn = ''
         l_User = False
+        print "self.usePhedex ", self.usePhedex
         if not self.usePhedex and (int(self.publish_data) == 0 and int(self.usenamespace) == 0) :
             ### add here check if user is trying to force a wrong LFN using a T2  TODO
             ## check if storage_name is a T2 (siteDB query)
@@ -207,9 +222,11 @@ class PhEDExDatasvcInfo:
             raise CrabException(msg)
         if self.publish_data_name == '' and int(self.usenamespace) == 1:
            self.publish_data_name = "DefaultDataset"
+
         if int(self.publish_data) == 1:
             if self.sched in ['CAF']: l_User=True 
             primaryDataset = self.computePrimaryDataset()
+            print "SB SONO QUI"
             ### added the case lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name, publish=True)
             ### for the publication in order to be able to check the lfn length  
             lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name, publish=True)
@@ -220,6 +237,14 @@ class PhEDExDatasvcInfo:
         else:
             if self.sched in ['CAF','LSF']: l_User=True 
             lfn = LFNBase(self.forced_path,self.user_remote_dir)
+
+            print "SB==================="
+            print "self.user_remote_dir.startswith('/store') ", self.user_remote_dir.startswith('/store')
+            
+            print "self.forced_path ", self.forced_path
+            print "self.user_remote_dir ", self.user_remote_dir
+            print "lfn ", lfn
+            print "SB==================="
 
         if ( lfn[-1] != '/' ) : lfn = lfn + '/'
 
