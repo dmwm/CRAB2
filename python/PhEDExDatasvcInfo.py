@@ -42,20 +42,26 @@ class PhEDExDatasvcInfo:
         self.datasvc_url = cfg_params.get("USER.datasvc_url",self.datasvc_url)
         self.srm_version = cfg_params.get("USER.srm_version",'srmv2')
         self.node = cfg_params.get('USER.storage_element',None)
+        self.usenamespace = cfg_params.get("USER.usenamespace",0)
+        self.user_remote_dir = cfg_params.get("USER.user_remote_dir",'')
 
         self.publish_data = cfg_params.get("USER.publish_data",0)
-        if self.publish_data:
+        if int(self.publish_data) == 1:
             # only accepts valid PhEDEx Node Names
             import Lexicon
             try:
                 Lexicon.cmsname(self.node)
             except Exception, text:
                 msg =  "%s\n'%s' is not a valid Phedex Node Name" % (text,self.node)
+                msg += "\n***************** NOTICE ***************"
                 msg += "\nOnly valid Phexex Node Names can be used as location for published data"
-                msg += "\nPlease fix storage_element parameter or set publish_data=0 in crab.cfg"
+                msg += "\nPlease fix storage_element or set publish_data=0 in [USER] section of crab.cfg"
+                if 'group' in   self.user_remote_dir:
+                    msg += '\nIf you are trying to stage out to some /store/group area, you can do like:'
+                    msg += '\n   storage_element = T2_US_UCSD'
+                    msg += '\n   user_remote_dir = /store/group/foo/bar'
+                msg += "\n****************************************"
                 raise CrabException(msg)
-        self.usenamespace = cfg_params.get("USER.usenamespace",0)
-        self.user_remote_dir = cfg_params.get("USER.user_remote_dir",'')
         if self.user_remote_dir:
             if ( self.user_remote_dir[-1] != '/' ) : self.user_remote_dir = self.user_remote_dir + '/'
           
@@ -117,8 +123,11 @@ class PhEDExDatasvcInfo:
             #print "--->>> query with 'stageout' "
             #########################################
 
-        if not self.usePhedex: 
+        if not self.usePhedex or \
+                self.user_remote_dir.startswith('/store/user') or \
+                self.user_remote_dir.startswith('/store/group') :
             self.forced_path = self.user_remote_dir
+
         return
  
     def getEndpoint(self):   
@@ -207,6 +216,7 @@ class PhEDExDatasvcInfo:
             raise CrabException(msg)
         if self.publish_data_name == '' and int(self.usenamespace) == 1:
            self.publish_data_name = "DefaultDataset"
+
         if int(self.publish_data) == 1:
             if self.sched in ['CAF']: l_User=True 
             primaryDataset = self.computePrimaryDataset()
@@ -219,7 +229,10 @@ class PhEDExDatasvcInfo:
             lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name)
         else:
             if self.sched in ['CAF','LSF']: l_User=True 
-            lfn = LFNBase(self.forced_path,self.user_remote_dir)
+            if int(self.publish_data) == 1:
+                lfn = LFNBase(self.forced_path)
+            else:
+                lfn = LFNBase(self.user_remote_dir)
 
         if ( lfn[-1] != '/' ) : lfn = lfn + '/'
 
