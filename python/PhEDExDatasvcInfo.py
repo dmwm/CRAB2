@@ -55,10 +55,10 @@ class PhEDExDatasvcInfo:
                 msg =  "%s\n'%s' is not a valid Phedex Node Name" % (text,self.node)
                 msg += "\n***************** NOTICE ***************"
                 msg += "\nOnly valid Phexex Node Names can be used as location for published data"
-                msg += "\nPlease fix storage_element parameter or set publish_data=0 in crab.cfg"
+                msg += "\nPlease fix storage_element or set publish_data=0 in [USER] section of crab.cfg"
                 if 'group' in   self.user_remote_dir:
                     msg += '\nIf you are trying to stage out to some /store/group area, you can do like:'
-                    msg += '\n   storage_element = T2_CH_CERN'
+                    msg += '\n   storage_element = T2_US_UCSD'
                     msg += '\n   user_remote_dir = /store/group/foo/bar'
                 msg += "\n****************************************"
                 raise CrabException(msg)
@@ -127,6 +127,7 @@ class PhEDExDatasvcInfo:
                 self.user_remote_dir.startswith('/store/user') or \
                 self.user_remote_dir.startswith('/store/group') :
             self.forced_path = self.user_remote_dir
+
         return
  
     def getEndpoint(self):   
@@ -228,7 +229,10 @@ class PhEDExDatasvcInfo:
             lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name)
         else:
             if self.sched in ['CAF','LSF']: l_User=True 
-            lfn = LFNBase(self.forced_path,self.user_remote_dir)
+            if int(self.publish_data) == 1:
+                lfn = LFNBase(self.forced_path)
+            else:
+                lfn = LFNBase(self.user_remote_dir)
 
         if ( lfn[-1] != '/' ) : lfn = lfn + '/'
 
