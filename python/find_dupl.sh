@@ -9,23 +9,24 @@ function usage
 Find a list of duplicate root files for a dataset at the SE that 
 should be removed.
 
-Usage: $PROGNAME -c <crab_dir> [--h | --help]
+Usage: $PROGNAME -c <crab_dir> [-q | --quiet]
 where options are:
   -c              Mandatory argument, crab project directory
   -v|--verbose    Turn on debug statements (D=false)
+  -q|--quiet      Do not print anything (D=false)
   -h|--help       This message
 
-  example: $PROGNAME -c <crab_dir> -v
+  example: $PROGNAME -c <crab_dir> -q
 
   This script creates two files in the present directory:
 
-    allfiles.list - all the root files for the dataset present at the SE
+    allfiles.list  - all the root files for the dataset present at the SE
     goodfiles.list - root files for successful jobs as found in the crab_fjr_n.xml files  
 
-  and finds the duplicate files from the difference. Note, that at times jobs may finish
-  and root files tranferred to the SE successfully, but crab may not immediately know about job
-  completion. Those 'most recent' root files will be tagged as duplicate, but they
-  are not.   
+  and finds the duplicate files from the difference. Note that, at times jobs may finish
+  and root files tranferred to the SE successfully, but crab may not immediately know about 
+  job completion. Those 'most recent' root files, in such cases, will be tagged as duplicate, 
+  but they are not. check id of the running job in order to avoid such issues.
 EOF
 
   exit 1
@@ -53,27 +54,38 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-[ $crab_dir != "" ] && [ -e $crab_dir ] || usage
+[ "$crab_dir" != "" ] || usage
+[ -e $crab_dir ] || { echo ERROR. $crab_dir not found!; exit 2; }
 
 gflist=goodfiles.list
 aflist=allfiles.list
 
-# First of all get the list of goodfile by reading the fjr files
-#export PERL5LIB=/afs/cern.ch/user/s/sarkar/public/perl/lib/perl5/site_perl/5.8.8:$PERL5LIB
-#perl -w /afs/cern.ch/user/s/sarkar/public/ListGoodOutputFiles_new.pl $project/res > $gflist
-
 [ $quiet -gt 0 ] || echo ">>> Find list of good files from fjr files..."
-python find_goodfiles.py -c $crab_dir -q > $gflist 
+python $CRABDIR/python/find_goodfiles.py -c $crab_dir -q > $gflist
+
 # Now find the remote directory name
 rdir=$(dirname $(head -1 $gflist))
-srmp=$(echo $rdir | awk -F= '{print $1}')
+
+# is storage local?
+srmp=""
+echo $rdir | grep 'srm://' > /dev/null
+if [ $? -eq 0 ]; then
+  srmp=$(echo $rdir | awk -F= '{print $1}')
+fi
 
 # Get list of all files for the project
 [ $quiet -gt 0 ] || echo ">>> Find list of all root files at $rdir ..."
-srmls $rdir 2> /dev/null | grep '.root$' | awk '{if (NF==2) print $NF}' > $aflist
+if [ "$srmp" != "" ]; then
+  srmls $rdir 2> /dev/null | grep '.root$' | awk '{if (NF==2) print $NF}' > $aflist
+else
+  ls -1 $rdir/*.root > $aflist
+fi
 
 # Now compare
 [ $quiet -gt 0 ] || echo ">>> Following is the list of duplicate files at $rdir ..."
+prefix=""
+[ "$srmp" != "" ] && prefix="$srmp""="
+
 for file in $(cat $aflist)
 do
   grep $file $gflist > /dev/null
@@ -83,7 +95,7 @@ do
   grep $bname $gflist > /dev/null
   [ $? -eq 0 ] && continue
 
-  echo "$srmp""=""$file"
+  echo "$prefix""$file"
 done
 
 exit 0
