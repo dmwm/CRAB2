@@ -10,7 +10,7 @@ import Lexicon
 
 class PhEDExDatasvcInfo:
     def __init__( self , cfg_params=None, config=None ):
- 
+
         ## PhEDEx Data Service URL
         self.datasvc_url="https://cmsweb.cern.ch/phedex/datasvc/xml/prod"
 
@@ -123,10 +123,16 @@ class PhEDExDatasvcInfo:
             #print "--->>> query with 'stageout' "
             #########################################
 
-        if not self.usePhedex or \
+        if (int(self.publish_data) == 1) and (
                 self.user_remote_dir.startswith('/store/user') or \
-                self.user_remote_dir.startswith('/store/group') :
+                self.user_remote_dir.startswith('/store/group') ):
             self.forced_path = self.user_remote_dir
+
+
+	if self.publish_data_name == '' and int(self.publish_data) == 1:
+            msg = "Error. The [USER] section does not have 'publish_data_name'\n"
+            msg += '\tFor further information please visit : \n\t%s'%self.dataPub_faq
+            raise CrabException(msg)
 
         return
  
@@ -166,6 +172,11 @@ class PhEDExDatasvcInfo:
         #print "    endpoint = ", endpoint
         ##############################
 
+        msg = "output files will be staged at %s" % self.node
+        msg += "\n       with LFN's starting with = %s" % (self.lfn)
+
+        common.logger.info(msg)
+
         return endpoint, self.node, self.lfn , SE, SE_PATH, User         
        
     def splitEndpoint(self, endpoint):
@@ -202,35 +213,20 @@ class PhEDExDatasvcInfo:
         define the LFN composing the needed pieces
         """
         lfn = ''
-        l_User = False
         if not self.usePhedex and (int(self.publish_data) == 0 and int(self.usenamespace) == 0) :
-            ### add here check if user is trying to force a wrong LFN using a T2  TODO
-            ## check if storage_name is a T2 (siteDB query)
-            ## if yes :match self.user_lfn with LFNBaseName...
-            ##     if NOT : raise (you are using a T2. It's not allowed stage out into self.user_path+self.user_lfn)   
             lfn = self.user_remote_dir
             return lfn
-	if self.publish_data_name == '' and int(self.publish_data) == 1:
-            msg = "Error. The [USER] section does not have 'publish_data_name'\n"
-            msg += '\tFor further information please visit : \n\t%s'%self.dataPub_faq
-            raise CrabException(msg)
-        if self.publish_data_name == '' and int(self.usenamespace) == 1:
-           self.publish_data_name = "DefaultDataset"
 
         if int(self.publish_data) == 1:
-            if self.sched in ['CAF']: l_User=True 
             primaryDataset = self.computePrimaryDataset()
-            ### added the case lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name, publish=True)
-            ### for the publication in order to be able to check the lfn length  
             lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name, publish=True)
         elif int(self.usenamespace) == 1:
-            if self.sched in ['CAF']: l_User=True 
             primaryDataset = self.computePrimaryDataset()
             lfn = LFNBase(self.forced_path, primaryDataset, self.publish_data_name)
         else:
-            if self.sched in ['CAF','LSF']: l_User=True 
-            if int(self.publish_data) == 1:
-                lfn = LFNBase(self.forced_path)
+            # come here if no publication
+            if int(self.usePhedex) == 1:
+                lfn = LFNBase(self.forced_path,self.user_remote_dir)
             else:
                 lfn = LFNBase(self.user_remote_dir)
 
@@ -305,6 +301,7 @@ class PhEDExDatasvcInfo:
         """
         if self.usePhedex:
             params = {'node' : self.node , 'lfn': self.lfn , 'protocol': self.protocol}
+
             datasvc_lfn2pfn="%s/lfn2pfn"%self.datasvc_url
             fullurl="%s/lfn2pfn?node=%s&lfn=%s&protocol=%s"%(self.datasvc_url,self.node,self.lfn,self.protocol) 
             #print "--->>> fullurl = ", fullurl
