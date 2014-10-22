@@ -131,6 +131,13 @@ class Scheduler :
         # Time padding for minimal job duration.
         self.minimal_job_duration = 10
 
+        self.proxyValid=0
+        self.dontCheckProxy=int(cfg_params.get("GRID.dont_check_proxy",0))
+        self.proxyServer= 'myproxy.cern.ch'
+        self.group = cfg_params.get("GRID.group", None) 	 
+        self.role = cfg_params.get("GRID.role", None)
+        self.checkProxy()
+
         return
 
     def boss(self):
