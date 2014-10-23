@@ -246,8 +246,9 @@ def getListOfPSNsForThisDomain(fqdn):
     for se in se2pnn.keys():
         if fqdn in se:
             pnn = se2pnn[se]
-            psn = pnn2psn[pnn]
-            if not psn in listOfPSNs:
-                listOfPSNs.append(psn)
+            if pnn in pnn2psn.keys():
+                psn = pnn2psn[pnn]
+                if not psn in listOfPSNs:
+                    listOfPSNs.append(psn)
 
     return listOfPSNs

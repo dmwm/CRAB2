@@ -33,21 +33,13 @@ class SchedulerGrid(Scheduler):
         self.jobtypeName   = cfg_params.get('CRAB.jobtype','')
         self.schedulerName = cfg_params.get('CRAB.scheduler','')
         Scheduler.configure(self,cfg_params)
-        self.proxyValid=0
+        #self.proxyValid=0
 
-        self.dontCheckProxy=int(cfg_params.get("GRID.dont_check_proxy",0)) 	 
+        #self.dontCheckProxy=int(cfg_params.get("GRID.dont_check_proxy",0)) 	 
         self.space_token = cfg_params.get("USER.space_token",None) 	 
- 	try:
-            self.proxyServer = Downloader("http://cmsdoc.cern.ch/cms/LCG/crab/config/").config("myproxy_server.conf")
-            self.proxyServer = self.proxyServer.strip()
-            if self.proxyServer is None:
-                raise CrabException("myproxy_server.conf retrieved but empty")
-        except Exception, e:
-            common.logger.info("Problem setting myproxy server endpoint: using myproxy.cern.ch")
-            common.logger.debug(e)
-            self.proxyServer= 'myproxy.cern.ch'
-        self.group = cfg_params.get("GRID.group", None) 	 
-        self.role = cfg_params.get("GRID.role", None)
+        self.proxyServer= 'myproxy.cern.ch'
+        #self.group = cfg_params.get("GRID.group", None) 	 
+        #self.role = cfg_params.get("GRID.role", None)
 
         removeBList = cfg_params.get("GRID.remove_default_blacklist", 0 )
         blackAnaOps = None

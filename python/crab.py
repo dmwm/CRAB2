@@ -102,11 +102,16 @@ class Crab:
         if opts.has_key('-use_server'):
             self.UseServer = int(opts['-use_server'])
             if self.UseServer==1:
+                msg="There is no Crab2 server since years. Check crab.cfg"
+                raise CrabException(msg)
                 opts['-server_name']='default'
         if opts.has_key('-server_name'):
             srvName = opts.get('-server_name', None)
             if srvName == 'None':
                 srvName = None
+            if srvName is not None:
+                msg="There is no Crab2 server since years. Check crab.cfg"
+                raise CrabException(msg)
             self.UseServer = int( srvName is not None ) # cast bool to int
 
         common._db = DBinterface(self.cfg_params)
